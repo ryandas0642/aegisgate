@@ -23,7 +23,8 @@ export class ProxyClient {
       signal: AbortSignal.timeout(5000),
     });
     const data = await boundedJson(response);
-    if (!response.ok) throw new EnforcementRejection(`Proxy refused the operation (HTTP ${response.status})`);
+    if (!response.ok)
+      throw new EnforcementRejection(`Proxy refused the operation (HTTP ${response.status})`);
     return data;
   }
   async snapshot(): Promise<Snapshot> {

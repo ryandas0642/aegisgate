@@ -52,7 +52,8 @@ export async function investigate(
       continue;
     }
     if (decision.proposal) {
-      if (incident.phase === 'verification') throw new Error('Verification reviews cannot propose another action');
+      if (incident.phase === 'verification')
+        throw new Error('Verification reviews cannot propose another action');
       if (!tools)
         throw new Error('An action proposal requires an actual investigation tool result');
       if (

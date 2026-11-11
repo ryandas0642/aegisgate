@@ -74,7 +74,23 @@ export class Broker {
       mode,
     };
     this.store.transaction(() => {
-      if (this.store.proposals().some(p => p.content.incidentId === incidentId && ['proposed', 'executing', 'applied', 'verified', 'uncertain', 'inconclusive'].includes(p.status))) throw new Error('This incident already has an active proposal');
+      if (
+        this.store
+          .proposals()
+          .some(
+            (p) =>
+              p.content.incidentId === incidentId &&
+              [
+                'proposed',
+                'executing',
+                'applied',
+                'verified',
+                'uncertain',
+                'inconclusive',
+              ].includes(p.status),
+          )
+      )
+        throw new Error('This incident already has an active proposal');
       this.store.putProposal(proposal);
       incident.status = 'awaiting_approval';
       this.store.putIncident(incident);
@@ -101,7 +117,10 @@ export class Broker {
       proposal.status = 'stale';
       this.store.putProposal(proposal);
       const incident = this.store.incident(proposal.content.incidentId);
-      if (incident) { incident.status = incident.finding ? 'investigated' : 'unavailable'; this.store.putIncident(incident); }
+      if (incident) {
+        incident.status = incident.finding ? 'investigated' : 'unavailable';
+        this.store.putIncident(incident);
+      }
       this.store.audit('approval.rejected', { id, reason: 'expired or changed state' });
       throw new Error('Proposal expired or proxy state changed; investigate and propose again');
     }
@@ -143,7 +162,9 @@ export class Broker {
       this.store.putProposal(proposal);
       this.store.audit(refused ? 'action.refused' : 'action.uncertain', {
         id,
-        note: refused ? 'The enforcement endpoint rejected this action.' : 'Reconcile against the proxy action ledger before any retry.',
+        note: refused
+          ? 'The enforcement endpoint rejected this action.'
+          : 'Reconcile against the proxy action ledger before any retry.',
       });
     }
     return proposal;
@@ -156,7 +177,10 @@ export class Broker {
     this.store.transaction(() => {
       this.store.putProposal(proposal);
       const incident = this.store.incident(proposal.content.incidentId);
-      if (incident) { incident.status = incident.finding ? 'investigated' : 'unavailable'; this.store.putIncident(incident); }
+      if (incident) {
+        incident.status = incident.finding ? 'investigated' : 'unavailable';
+        this.store.putIncident(incident);
+      }
       this.store.audit('human.rejected', {
         id,
         proposalHash: expectedHash,
@@ -167,11 +191,23 @@ export class Broker {
   }
   reconcile(snapshot: Snapshot): void {
     for (const proposal of this.store.proposals()) {
-      if (proposal.status === 'proposed' && (Date.now() > proposal.approvalDeadline || snapshot.epoch !== proposal.content.expectedEpoch || snapshot.revision !== proposal.content.expectedRevision)) {
-        proposal.status = 'stale'; this.store.putProposal(proposal);
+      if (
+        proposal.status === 'proposed' &&
+        (Date.now() > proposal.approvalDeadline ||
+          snapshot.epoch !== proposal.content.expectedEpoch ||
+          snapshot.revision !== proposal.content.expectedRevision)
+      ) {
+        proposal.status = 'stale';
+        this.store.putProposal(proposal);
         const incident = this.store.incident(proposal.content.incidentId);
-        if (incident) { incident.status = incident.finding ? 'investigated' : 'unavailable'; this.store.putIncident(incident); }
-        this.store.audit('proposal.invalidated', { id: proposal.id, reason: 'Approval window expired or configuration changed' });
+        if (incident) {
+          incident.status = incident.finding ? 'investigated' : 'unavailable';
+          this.store.putIncident(incident);
+        }
+        this.store.audit('proposal.invalidated', {
+          id: proposal.id,
+          reason: 'Approval window expired or configuration changed',
+        });
         continue;
       }
       if (
@@ -203,13 +239,21 @@ export class Broker {
                   e.type === 'request.completed',
               )
           : [];
-        const denied = after.find((e) => e.source === proposal.content.source && e.status === 403) || (typeof proposal.verification?.deniedEvidence === 'string' ? this.store.evidence(proposal.verification.deniedEvidence) : undefined);
-        const control = after.find(
-          (e) =>
-            e.source !== proposal.content.source &&
-            Number(e.status) >= 200 &&
-            Number(e.status) < 400,
-        ) || (typeof proposal.verification?.controlTrafficEvidence === 'string' ? this.store.evidence(proposal.verification.controlTrafficEvidence) : undefined);
+        const denied =
+          after.find((e) => e.source === proposal.content.source && e.status === 403) ||
+          (typeof proposal.verification?.deniedEvidence === 'string'
+            ? this.store.evidence(proposal.verification.deniedEvidence)
+            : undefined);
+        const control =
+          after.find(
+            (e) =>
+              e.source !== proposal.content.source &&
+              Number(e.status) >= 200 &&
+              Number(e.status) < 400,
+          ) ||
+          (typeof proposal.verification?.controlTrafficEvidence === 'string'
+            ? this.store.evidence(proposal.verification.controlTrafficEvidence)
+            : undefined);
         const installed = snapshot.rules.some(
           (rule) => rule.actionId === proposal.id && rule.source === proposal.content.source,
         );

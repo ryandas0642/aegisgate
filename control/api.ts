@@ -78,9 +78,13 @@ export function createApi(options: Options) {
         const id = store.get<string>('active-job:' + incident.id);
         const job = id ? store.get<Job>('job:' + id) : undefined;
         if (job?.status === 'running' && Date.now() > job.expires) {
-          job.status = 'expired'; store.set('job:' + job.id, job);
+          job.status = 'expired';
+          store.set('job:' + job.id, job);
           if (job.reviewId) store.set('review:' + job.reviewId, { status: 'unavailable' });
-          else if (incident.status === 'investigating') { incident.status = 'unavailable'; store.putIncident(incident); }
+          else if (incident.status === 'investigating') {
+            incident.status = 'unavailable';
+            store.putIncident(incident);
+          }
           store.audit('investigation.expired', { jobId: job.id, incidentId: incident.id });
         }
       }
@@ -126,12 +130,15 @@ export function createApi(options: Options) {
     if (!incident) return null;
     const detection = store.evidence(incident.eventId);
     if (!detection) return null;
-    const verificationEvidence = [review?.verification?.deniedEvidence, review?.verification?.controlTrafficEvidence].flatMap(id => typeof id === 'string' && store.evidence(id) ? [store.evidence(id)!] : []);
+    const verificationEvidence = [
+      review?.verification?.deniedEvidence,
+      review?.verification?.controlTrafficEvidence,
+    ].flatMap((id) => (typeof id === 'string' && store.evidence(id) ? [store.evidence(id)!] : []));
     const job: Job = {
       id: randomUUID(),
       incidentId: incident.id,
       ...(review ? { reviewId: review.id } : {}),
-      evidenceIds: [detection.id, ...verificationEvidence.map(event => event.id)],
+      evidenceIds: [detection.id, ...verificationEvidence.map((event) => event.id)],
       expires: Date.now() + 125000,
       status: 'running',
     };
