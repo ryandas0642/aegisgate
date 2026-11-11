@@ -285,7 +285,7 @@ export function Overview({
             <small>req/s</small>
           </div>
           <div className="metric-note">
-            {metrics ? metrics.requests.toLocaleString() : '—'} admitted requests this proxy
+            {metrics ? metrics.requests.toLocaleString() : '—'} requests evaluated this proxy
             lifetime
           </div>
           <div className="metric-accent cyan" />

@@ -53,4 +53,6 @@ Compose separates the synthetic client network (`172.30.0.0/24`) from operations
 
 ## Trade-offs
 
+Counter semantics are explicit: `requests` counts supported requests reaching admission, including source/rate rejections; malformed requests rejected before admission are outside that counter. `forwarded` counts fully parsed upstream responses, including application error statuses. Per-backend request counts are routing selections, including selections followed by a connection failure. These are operational observations, not benchmark results.
+
 C++/Beast exposes real network ownership and deadlines while providing HTTP parsing. TypeScript keeps agent and operator contracts inspectable. SQLite reduces setup complexity and gives durable local records but remains a single local store. One investigator gives demonstrable tool selection without adding nominal specialist roles. Buffered messages and connection close simplify framing at the cost of streaming and connection reuse.
