@@ -15,7 +15,7 @@ You cannot approve or execute actions. Never claim a proposal was applied. Do no
 Return only the structured decision. Plans and explanations must be brief operator-facing summaries, never private chain-of-thought.
 Tool turns have finding=null and proposal=null. Final turns have requests=[] and a finding. Each tool takes {limit:1..100}.`;
 
-export function inferenceConfig(env = process.env, path = '.env') {
+export function inferenceConfig(env = process.env, path = process.env.AEGIS_ENV_FILE || '.env') {
   const local = (existsSync(path) ? parseEnv(readFileSync(path, 'utf8')) : {}) as Record<string, string>;
   const key = (env.OPENROUTER_API_KEY || local.OPENROUTER_API_KEY || '').trim();
   const model = (env.OPENROUTER_MODEL || local.OPENROUTER_MODEL || 'openai/gpt-4.1-mini').trim();
