@@ -16,36 +16,93 @@ Return only the structured decision. Plans and explanations must be brief operat
 Tool turns have finding=null and proposal=null. Final turns have requests=[] and a finding. Each tool takes {limit:1..100}.`;
 
 export function inferenceConfig(env = process.env, path = process.env.AEGIS_ENV_FILE || '.env') {
-  const local = (existsSync(path) ? parseEnv(readFileSync(path, 'utf8')) : {}) as Record<string, string>;
+  const local = (existsSync(path) ? parseEnv(readFileSync(path, 'utf8')) : {}) as Record<
+    string,
+    string
+  >;
   const key = (env.OPENROUTER_API_KEY || local.OPENROUTER_API_KEY || '').trim();
   const model = (env.OPENROUTER_MODEL || local.OPENROUTER_MODEL || 'openai/gpt-4.1-mini').trim();
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.:-]+$/.test(model)) throw new Error('Configure an explicit provider/model ID');
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.:-]+$/.test(model))
+    throw new Error('Configure an explicit provider/model ID');
   return { key, model };
 }
 
 export class Provider {
   readonly mode = 'live' as const;
   private attempts = 0;
-  constructor(private config: ReturnType<typeof inferenceConfig>, private transport = fetch) {}
-  async decide(context: unknown, evidence: Set<string>, record: (type: string, value: unknown) => Promise<void>): Promise<ModelReply> {
-    if (!this.config.key) throw new Error('Model provider unavailable: configure OPENROUTER_API_KEY');
-    const body = { model: this.config.model, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: JSON.stringify(context) }], temperature: 0.2, max_tokens: 2400, provider: { require_parameters: true }, response_format: { type: 'json_schema', json_schema: { name: 'investigation_decision', strict: true, schema: decisionSchema } } };
+  constructor(
+    private config: ReturnType<typeof inferenceConfig>,
+    private transport = fetch,
+  ) {}
+  async decide(
+    context: unknown,
+    evidence: Set<string>,
+    record: (type: string, value: unknown) => Promise<void>,
+  ): Promise<ModelReply> {
+    if (!this.config.key)
+      throw new Error('Model provider unavailable: configure OPENROUTER_API_KEY');
+    const body = {
+      model: this.config.model,
+      messages: [
+        { role: 'system', content: SYSTEM },
+        { role: 'user', content: JSON.stringify(context) },
+      ],
+      temperature: 0.2,
+      max_tokens: 2400,
+      provider: { require_parameters: true },
+      response_format: {
+        type: 'json_schema',
+        json_schema: { name: 'investigation_decision', strict: true, schema: decisionSchema },
+      },
+    };
     for (let attempt = 0; attempt < 2; attempt++) {
       if (++this.attempts > 8) throw new Error('Investigation HTTP inference budget exhausted');
-      await record('model.requested', { provider: 'OpenRouter', model: this.config.model, attempt: this.attempts, request: body, mode: 'live' });
-      const response = await this.transport(ENDPOINT, { method: 'POST', redirect: 'error', headers: { Authorization: `Bearer ${this.config.key}`, 'Content-Type': 'application/json', 'X-Title': 'AegisGate' }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000) });
-      const data = await boundedJson(response, 512 * 1024) as Record<string, any>;
+      await record('model.requested', {
+        provider: 'OpenRouter',
+        model: this.config.model,
+        attempt: this.attempts,
+        request: body,
+        mode: 'live',
+      });
+      const response = await this.transport(ENDPOINT, {
+        method: 'POST',
+        redirect: 'error',
+        headers: {
+          Authorization: `Bearer ${this.config.key}`,
+          'Content-Type': 'application/json',
+          'X-Title': 'AegisGate',
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(20000),
+      });
+      const data = (await boundedJson(response, 512 * 1024)) as Record<string, any>;
       if (!response.ok || data.error) {
         await record('model.rejected', { status: response.status, attempt: this.attempts });
         if (!attempt && [429, 502, 503, 504].includes(response.status)) continue;
         throw new Error(`Model provider rejected the request (HTTP ${response.status})`);
       }
       const choice = data.choices?.[0];
-      if (typeof data.id !== 'string' || !data.id.trim() || typeof data.model !== 'string' || !data.model.trim() || choice?.finish_reason !== 'stop' || typeof choice.message?.content !== 'string' || choice.message?.tool_calls?.length) throw new Error('Incomplete or unsupported provider response');
+      if (
+        typeof data.id !== 'string' ||
+        !data.id.trim() ||
+        typeof data.model !== 'string' ||
+        !data.model.trim() ||
+        choice?.finish_reason !== 'stop' ||
+        typeof choice.message?.content !== 'string' ||
+        choice.message?.tool_calls?.length
+      )
+        throw new Error('Incomplete or unsupported provider response');
       const content = String(choice.message.content).split(this.config.key).join('[REDACTED]');
       const decision = validateDecision(redact(JSON.parse(content)), evidence);
-      const result: ModelReply = { decision, requestId: data.id, model: data.model, usage: redact(data.usage ?? null), mode: 'live' };
-      await record('model.completed', result); return result;
+      const result: ModelReply = {
+        decision,
+        requestId: data.id,
+        model: data.model,
+        usage: redact(data.usage ?? null),
+        mode: 'live',
+      };
+      await record('model.completed', result);
+      return result;
     }
     throw new Error('Inference attempt limit reached');
   }

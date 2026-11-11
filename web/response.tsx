@@ -4,15 +4,386 @@ import { api, short, statusText, time, type ConsoleState } from './api';
 import { Badge, Empty, Icon, Panel } from './primitives';
 import { EvidenceButton, IncidentSelect, IncidentSummary } from './investigation';
 
-export function ResponseView({ state, selected, change, refresh }: { state: ConsoleState; selected: string; change: (id: string) => void; refresh: () => Promise<void> }) {
-  const [review, setReview] = useState<Proposal | null>(null), [consent, setConsent] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
-  const [manual, setManual] = useState(false), [ttl, setTtl] = useState(60), [rationale, setRationale] = useState('The proxy recorded repeated violations from this exact source. Temporarily deny it while reviewing the evidence.');
-  const incident = state.incidents.find(i => i.id === selected) || state.incidents[0];
-  if (!incident) return <Panel title="Response center"><Empty title="No response needs your review" detail="Responses begin with an actual incident and evidence-bound proposal." icon="lock"/></Panel>;
-  const proposals = state.proposals.filter(p => p.content.incidentId === incident.id);
-  const mutate = async (path: string, input: unknown) => { setBusy(true); setError(''); try { await api(path, input); setReview(null); setManual(false); await refresh(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } };
-  return <><IncidentSelect state={state} selected={incident.id} change={change}/><IncidentSummary incident={incident}/>{error && <div className="notice error" role="alert">{error}</div>}{proposals.length ? proposals.map(proposal => <section className="proposal-card" key={proposal.id}><div className="proposal-heading"><div><Icon name="shield" size={20}/><h2>Temporary source deny</h2></div><Badge tone={proposal.status === 'verified' ? 'green' : ['proposed', 'uncertain'].includes(proposal.status) ? 'amber' : 'muted'}>{statusText(proposal.status)}</Badge></div><Badge tone={proposal.mode === 'live' ? 'cyan' : proposal.mode === 'fixture' ? 'red' : 'muted'}>{proposal.mode === 'live' ? 'Live model proposal' : proposal.mode === 'fixture' ? 'TEST FIXTURE · Not live inference' : 'Manual operator proposal'}</Badge><p>{proposal.content.rationale}</p><div className="details-grid"><div><span>EXACT TARGET</span><strong><code>{proposal.content.source}/32</code></strong></div><div><span>DURATION</span><strong>{proposal.content.ttlSeconds} seconds</strong></div><div className="full"><span>EXPECTED IMPACT</span><p>{proposal.content.expectedImpact}</p></div><div><span>CONFIGURATION VERSION</span><code>{short(proposal.content.expectedEpoch, 12)} / {proposal.content.expectedRevision}</code></div><div><span>PROPOSAL FINGERPRINT</span><code title={proposal.hash}>{short(proposal.hash, 20)}</code></div></div><div>{proposal.content.evidenceIds.map(id => <EvidenceButton key={id} id={id}/>)}</div>{proposal.verification && <div className="verification"><div><strong>Deterministic verification</strong><Badge tone={proposal.status === 'verified' ? 'green' : 'muted'}>{statusText(String(proposal.verification.outcome || proposal.status))}</Badge></div><p>{String(proposal.verification.note || proposal.verification.reason || 'Inspect the actual outcome record below.')}</p>{!!proposal.verification.deniedEvidence && <EvidenceButton id={String(proposal.verification.deniedEvidence)}/>} {!!proposal.verification.controlTrafficEvidence && <EvidenceButton id={String(proposal.verification.controlTrafficEvidence)}/>} {!!proposal.verification.expiryObserved && <p>Rule expiration observed at {time(String(proposal.verification.expiryObservedAt))}.</p>}{!!proposal.verification.modelReview && <details><summary>Agent review of verification</summary><pre className="audit-detail">{JSON.stringify(proposal.verification.modelReview, null, 2)}</pre></details>}</div>}{proposal.execution && <details><summary>Actual enforcement acknowledgement</summary><pre className="audit-detail">{JSON.stringify(proposal.execution, null, 2)}</pre></details>}<div className="proposal-meta"><span>Created {time(proposal.createdAt)} · {short(proposal.id, 12)}</span>{proposal.status === 'proposed' && <span>{proposal.approvalDeadline > Date.now() ? `Review window: ${Math.ceil((proposal.approvalDeadline - Date.now()) / 1000)}s` : 'Approval window expired'}</span>}</div>{proposal.status === 'proposed' && <div className="proposal-actions"><button className="button primary" disabled={busy || proposal.approvalDeadline < Date.now()} onClick={() => { setConsent(false); setReview(proposal); }}>Review & approve<Icon name="arrow" size={15}/></button><button className="button secondary" disabled={busy} onClick={() => void mutate(`/api/proposals/${proposal.id}/reject`, { hash: proposal.hash })}>Reject proposal</button></div>}</section>) : <Panel title="No proposed response" eyebrow="HUMAN-SUPERVISED OPERATIONS"><Empty title={incident.kind === 'reliability' ? 'Routing recovery is automatic' : 'Waiting for an evidence-backed recommendation'} detail={incident.kind === 'reliability' ? 'The proxy removes unhealthy backends and restores recovered ones. The investigator explains these observations; no administrative action is required.' : 'The agent may recommend an action or decide that more evidence is needed. A model outage does not disable the proxy.'} icon={incident.kind === 'reliability' ? 'server' : 'lock'}/></Panel>}{incident.kind === 'security' && !proposals.some(p => ['proposed', 'executing', 'uncertain', 'applied', 'verified', 'inconclusive'].includes(p.status)) && <Panel title="Manual operator fallback" eyebrow="EXPLICITLY LABELED"><div className="detail-body"><p>You can propose the same bounded temporary deny using the actual detection evidence. This is a human-authored response and will never be labeled as an AI finding.</p><button className="button secondary" onClick={() => setManual(true)}><Icon name="shield" size={15}/>Create manual proposal</button></div></Panel>}
-    {review && <div className="modal-backdrop" onClick={() => { if (!busy) setReview(null); }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="approval-title" onClick={e => e.stopPropagation()}><button className="modal-close" aria-label="Close approval review" disabled={busy} onClick={() => setReview(null)}><Icon name="close"/></button><span className="eyebrow">EXPLICIT HUMAN APPROVAL</span><h2 id="approval-title">Authorize this exact response?</h2><p>This changes the running proxy. The broker will reject changed, expired, or stale proposals.</p><div className="details-grid"><div><span>TARGET</span><strong><code>{review.content.source}/32</code></strong></div><div><span>AUTOMATIC EXPIRATION</span><strong>{review.content.ttlSeconds} seconds after application</strong></div><div className="full"><span>EXPECTED IMPACT</span><p>{review.content.expectedImpact}</p></div><div className="full"><span>FULL PROPOSAL HASH</span><code>{review.hash}</code></div></div><label className="consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}/><span>I reviewed the target, duration, evidence, and impact. I authorize this temporary deny.</span></label>{error && <p className="error">{error}</p>}<div className="modal-actions"><button className="button secondary" disabled={busy} onClick={() => setReview(null)}>Cancel</button><button className="button primary" disabled={!consent || busy || review.approvalDeadline < Date.now()} onClick={() => void mutate(`/api/proposals/${review.id}/approve`, { hash: review.hash })}><Icon name="lock" size={15}/>{busy ? 'Applying…' : 'Approve temporary deny'}</button></div></section></div>}
-    {manual && <div className="modal-backdrop" onClick={() => { if (!busy) setManual(false); }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="manual-title" onClick={e => e.stopPropagation()}><button className="modal-close" aria-label="Close manual proposal" disabled={busy} onClick={() => setManual(false)}><Icon name="close"/></button><span className="eyebrow">MANUAL OPERATOR PROPOSAL</span><h2 id="manual-title">A bounded human response.</h2><p>Target: <code>{incident.source}/32</code>. You will review and approve the resulting proposal separately.</p><label htmlFor="deny-duration">Temporary deny duration</label><select id="deny-duration" value={ttl} onChange={e => setTtl(Number(e.target.value))}>{[60, 120, 300, 600].map(value => <option key={value} value={value}>{value} seconds</option>)}</select><label htmlFor="rationale">Evidence-based rationale</label><textarea id="rationale" maxLength={1200} value={rationale} onChange={e => setRationale(e.target.value)}/><div className="modal-actions"><button className="button secondary" disabled={busy} onClick={() => setManual(false)}>Cancel</button><button className="button primary" disabled={busy || !rationale.trim()} onClick={() => void mutate(`/api/incidents/${incident.id}/propose`, { source: incident.source, ttlSeconds: ttl, evidenceIds: [incident.eventId], rationale, expectedImpact: `Temporarily deny ${incident.source}/32 for ${ttl} seconds. Other client addresses keep their existing controls.` })}>{busy ? 'Creating…' : 'Create reviewable proposal'}</button></div>{error && <p className="error">{error}</p>}</section></div>}
-  </>;
+export function ResponseView({
+  state,
+  selected,
+  change,
+  refresh,
+}: {
+  state: ConsoleState;
+  selected: string;
+  change: (id: string) => void;
+  refresh: () => Promise<void>;
+}) {
+  const [review, setReview] = useState<Proposal | null>(null),
+    [consent, setConsent] = useState(false),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState('');
+  const [manual, setManual] = useState(false),
+    [ttl, setTtl] = useState(60),
+    [rationale, setRationale] = useState(
+      'The proxy recorded repeated violations from this exact source. Temporarily deny it while reviewing the evidence.',
+    );
+  const incident = state.incidents.find((i) => i.id === selected) || state.incidents[0];
+  if (!incident)
+    return (
+      <Panel title="Response center">
+        <Empty
+          title="No response needs your review"
+          detail="Responses begin with an actual incident and evidence-bound proposal."
+          icon="lock"
+        />
+      </Panel>
+    );
+  const proposals = state.proposals.filter((p) => p.content.incidentId === incident.id);
+  const mutate = async (path: string, input: unknown) => {
+    setBusy(true);
+    setError('');
+    try {
+      await api(path, input);
+      setReview(null);
+      setManual(false);
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <IncidentSelect state={state} selected={incident.id} change={change} />
+      <IncidentSummary incident={incident} />
+      {error && (
+        <div className="notice error" role="alert">
+          {error}
+        </div>
+      )}
+      {proposals.length ? (
+        proposals.map((proposal) => (
+          <section className="proposal-card" key={proposal.id}>
+            <div className="proposal-heading">
+              <div>
+                <Icon name="shield" size={20} />
+                <h2>Temporary source deny</h2>
+              </div>
+              <Badge
+                tone={
+                  proposal.status === 'verified'
+                    ? 'green'
+                    : ['proposed', 'uncertain'].includes(proposal.status)
+                      ? 'amber'
+                      : 'muted'
+                }
+              >
+                {statusText(proposal.status)}
+              </Badge>
+            </div>
+            <Badge
+              tone={
+                proposal.mode === 'live' ? 'cyan' : proposal.mode === 'fixture' ? 'red' : 'muted'
+              }
+            >
+              {proposal.mode === 'live'
+                ? 'Live model proposal'
+                : proposal.mode === 'fixture'
+                  ? 'TEST FIXTURE · Not live inference'
+                  : 'Manual operator proposal'}
+            </Badge>
+            <p>{proposal.content.rationale}</p>
+            <div className="details-grid">
+              <div>
+                <span>EXACT TARGET</span>
+                <strong>
+                  <code>{proposal.content.source}/32</code>
+                </strong>
+              </div>
+              <div>
+                <span>DURATION</span>
+                <strong>{proposal.content.ttlSeconds} seconds</strong>
+              </div>
+              <div className="full">
+                <span>EXPECTED IMPACT</span>
+                <p>{proposal.content.expectedImpact}</p>
+              </div>
+              <div>
+                <span>CONFIGURATION VERSION</span>
+                <code>
+                  {short(proposal.content.expectedEpoch, 12)} / {proposal.content.expectedRevision}
+                </code>
+              </div>
+              <div>
+                <span>PROPOSAL FINGERPRINT</span>
+                <code title={proposal.hash}>{short(proposal.hash, 20)}</code>
+              </div>
+            </div>
+            <div>
+              {proposal.content.evidenceIds.map((id) => (
+                <EvidenceButton key={id} id={id} />
+              ))}
+            </div>
+            {proposal.verification && (
+              <div className="verification">
+                <div>
+                  <strong>Deterministic verification</strong>
+                  <Badge tone={proposal.status === 'verified' ? 'green' : 'muted'}>
+                    {statusText(String(proposal.verification.outcome || proposal.status))}
+                  </Badge>
+                </div>
+                <p>
+                  {String(
+                    proposal.verification.note ||
+                      proposal.verification.reason ||
+                      'Inspect the actual outcome record below.',
+                  )}
+                </p>
+                {!!proposal.verification.deniedEvidence && (
+                  <EvidenceButton id={String(proposal.verification.deniedEvidence)} />
+                )}{' '}
+                {!!proposal.verification.controlTrafficEvidence && (
+                  <EvidenceButton id={String(proposal.verification.controlTrafficEvidence)} />
+                )}{' '}
+                {!!proposal.verification.expiryObserved && (
+                  <p>
+                    Rule expiration observed at{' '}
+                    {time(String(proposal.verification.expiryObservedAt))}.
+                  </p>
+                )}
+                {!!proposal.verification.modelReview && (
+                  <details>
+                    <summary>Agent review of verification</summary>
+                    <pre className="audit-detail">
+                      {JSON.stringify(proposal.verification.modelReview, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            )}
+            {proposal.execution && (
+              <details>
+                <summary>Actual enforcement acknowledgement</summary>
+                <pre className="audit-detail">{JSON.stringify(proposal.execution, null, 2)}</pre>
+              </details>
+            )}
+            <div className="proposal-meta">
+              <span>
+                Created {time(proposal.createdAt)} · {short(proposal.id, 12)}
+              </span>
+              {proposal.status === 'proposed' && (
+                <span>
+                  {proposal.approvalDeadline > Date.now()
+                    ? `Review window: ${Math.ceil((proposal.approvalDeadline - Date.now()) / 1000)}s`
+                    : 'Approval window expired'}
+                </span>
+              )}
+            </div>
+            {proposal.status === 'proposed' && (
+              <div className="proposal-actions">
+                <button
+                  className="button primary"
+                  disabled={busy || proposal.approvalDeadline < Date.now()}
+                  onClick={() => {
+                    setConsent(false);
+                    setReview(proposal);
+                  }}
+                >
+                  Review & approve
+                  <Icon name="arrow" size={15} />
+                </button>
+                <button
+                  className="button secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    void mutate(`/api/proposals/${proposal.id}/reject`, { hash: proposal.hash })
+                  }
+                >
+                  Reject proposal
+                </button>
+              </div>
+            )}
+          </section>
+        ))
+      ) : (
+        <Panel title="No proposed response" eyebrow="HUMAN-SUPERVISED OPERATIONS">
+          <Empty
+            title={
+              incident.kind === 'reliability'
+                ? 'Routing recovery is automatic'
+                : 'Waiting for an evidence-backed recommendation'
+            }
+            detail={
+              incident.kind === 'reliability'
+                ? 'The proxy removes unhealthy backends and restores recovered ones. The investigator explains these observations; no administrative action is required.'
+                : 'The agent may recommend an action or decide that more evidence is needed. A model outage does not disable the proxy.'
+            }
+            icon={incident.kind === 'reliability' ? 'server' : 'lock'}
+          />
+        </Panel>
+      )}
+      {incident.kind === 'security' &&
+        !proposals.some((p) =>
+          ['proposed', 'executing', 'uncertain', 'applied', 'verified', 'inconclusive'].includes(
+            p.status,
+          ),
+        ) && (
+          <Panel title="Manual operator fallback" eyebrow="EXPLICITLY LABELED">
+            <div className="detail-body">
+              <p>
+                You can propose the same bounded temporary deny using the actual detection evidence.
+                This is a human-authored response and will never be labeled as an AI finding.
+              </p>
+              <button className="button secondary" onClick={() => setManual(true)}>
+                <Icon name="shield" size={15} />
+                Create manual proposal
+              </button>
+            </div>
+          </Panel>
+        )}
+      {review && (
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            if (!busy) setReview(null);
+          }}
+        >
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="approval-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal-close"
+              aria-label="Close approval review"
+              disabled={busy}
+              onClick={() => setReview(null)}
+            >
+              <Icon name="close" />
+            </button>
+            <span className="eyebrow">EXPLICIT HUMAN APPROVAL</span>
+            <h2 id="approval-title">Authorize this exact response?</h2>
+            <p>
+              This changes the running proxy. The broker will reject changed, expired, or stale
+              proposals.
+            </p>
+            <div className="details-grid">
+              <div>
+                <span>TARGET</span>
+                <strong>
+                  <code>{review.content.source}/32</code>
+                </strong>
+              </div>
+              <div>
+                <span>AUTOMATIC EXPIRATION</span>
+                <strong>{review.content.ttlSeconds} seconds after application</strong>
+              </div>
+              <div className="full">
+                <span>EXPECTED IMPACT</span>
+                <p>{review.content.expectedImpact}</p>
+              </div>
+              <div className="full">
+                <span>FULL PROPOSAL HASH</span>
+                <code>{review.hash}</code>
+              </div>
+            </div>
+            <label className="consent">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+              />
+              <span>
+                I reviewed the target, duration, evidence, and impact. I authorize this temporary
+                deny.
+              </span>
+            </label>
+            {error && <p className="error">{error}</p>}
+            <div className="modal-actions">
+              <button className="button secondary" disabled={busy} onClick={() => setReview(null)}>
+                Cancel
+              </button>
+              <button
+                className="button primary"
+                disabled={!consent || busy || review.approvalDeadline < Date.now()}
+                onClick={() =>
+                  void mutate(`/api/proposals/${review.id}/approve`, { hash: review.hash })
+                }
+              >
+                <Icon name="lock" size={15} />
+                {busy ? 'Applying…' : 'Approve temporary deny'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+      {manual && (
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            if (!busy) setManual(false);
+          }}
+        >
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="manual-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal-close"
+              aria-label="Close manual proposal"
+              disabled={busy}
+              onClick={() => setManual(false)}
+            >
+              <Icon name="close" />
+            </button>
+            <span className="eyebrow">MANUAL OPERATOR PROPOSAL</span>
+            <h2 id="manual-title">A bounded human response.</h2>
+            <p>
+              Target: <code>{incident.source}/32</code>. You will review and approve the resulting
+              proposal separately.
+            </p>
+            <label htmlFor="deny-duration">Temporary deny duration</label>
+            <select id="deny-duration" value={ttl} onChange={(e) => setTtl(Number(e.target.value))}>
+              {[60, 120, 300, 600].map((value) => (
+                <option key={value} value={value}>
+                  {value} seconds
+                </option>
+              ))}
+            </select>
+            <label htmlFor="rationale">Evidence-based rationale</label>
+            <textarea
+              id="rationale"
+              maxLength={1200}
+              value={rationale}
+              onChange={(e) => setRationale(e.target.value)}
+            />
+            <div className="modal-actions">
+              <button className="button secondary" disabled={busy} onClick={() => setManual(false)}>
+                Cancel
+              </button>
+              <button
+                className="button primary"
+                disabled={busy || !rationale.trim()}
+                onClick={() =>
+                  void mutate(`/api/incidents/${incident.id}/propose`, {
+                    source: incident.source,
+                    ttlSeconds: ttl,
+                    evidenceIds: [incident.eventId],
+                    rationale,
+                    expectedImpact: `Temporarily deny ${incident.source}/32 for ${ttl} seconds. Other client addresses keep their existing controls.`,
+                  })
+                }
+              >
+                {busy ? 'Creating…' : 'Create reviewable proposal'}
+              </button>
+            </div>
+            {error && <p className="error">{error}</p>}
+          </section>
+        </div>
+      )}
+    </>
+  );
 }

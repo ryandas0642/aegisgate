@@ -4,7 +4,7 @@ services:
     build: { context: ., target: proxy-runtime }
     environment:
       AEGIS_PROXY_TOKEN: ${AEGIS_PROXY_TOKEN:?Run npm run setup first}
-    ports: ["127.0.0.1:8180:8180"]
+    ports: ['127.0.0.1:8180:8180']
     networks:
       edge: { ipv4_address: 172.30.0.2 }
       operations: { ipv4_address: 172.31.0.2 }
@@ -15,7 +15,7 @@ services:
     stop_grace_period: 12s
   console:
     build: { context: ., target: app-runtime }
-    ports: ["127.0.0.1:4174:4174"]
+    ports: ['127.0.0.1:4174:4174']
     environment:
       AEGIS_BIND: 0.0.0.0
       AEGIS_PROXY_ORIGIN: http://proxy:9090
@@ -24,7 +24,7 @@ services:
       AEGIS_OPERATOR_PASSWORD: ${AEGIS_OPERATOR_PASSWORD:?Run npm run setup first}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4.1-mini}
-    volumes: ["audit:/app/.runtime"]
+    volumes: ['audit:/app/.runtime']
     networks: [operations]
     depends_on: [proxy]
     read_only: true
@@ -34,7 +34,7 @@ services:
   backend-a:
     build: { context: ., target: app-runtime }
     command: [node, build/server/scripts/backend.js]
-    environment: { PORT: "8101", BACKEND_ID: backend-a }
+    environment: { PORT: '8101', BACKEND_ID: backend-a }
     networks:
       operations: { ipv4_address: 172.31.0.10 }
     read_only: true
@@ -43,7 +43,7 @@ services:
   backend-b:
     build: { context: ., target: app-runtime }
     command: [node, build/server/scripts/backend.js]
-    environment: { PORT: "8102", BACKEND_ID: backend-b }
+    environment: { PORT: '8102', BACKEND_ID: backend-b }
     networks:
       operations: { ipv4_address: 172.31.0.11 }
     read_only: true
@@ -52,7 +52,19 @@ services:
   normal:
     profiles: [demo]
     build: { context: ., target: app-runtime }
-    command: [node, build/server/scripts/traffic.js, --mode, normal, --source, auto, --origin, "http://proxy:8180/", --count, "1000"]
+    command:
+      [
+        node,
+        build/server/scripts/traffic.js,
+        --mode,
+        normal,
+        --source,
+        auto,
+        --origin,
+        'http://proxy:8180/',
+        --count,
+        '1000',
+      ]
     networks:
       edge: { ipv4_address: 172.30.0.10 }
     read_only: true
@@ -61,7 +73,17 @@ services:
   burst:
     profiles: [demo]
     build: { context: ., target: app-runtime }
-    command: [node, build/server/scripts/traffic.js, --mode, burst, --source, auto, --origin, "http://proxy:8180/"]
+    command:
+      [
+        node,
+        build/server/scripts/traffic.js,
+        --mode,
+        burst,
+        --source,
+        auto,
+        --origin,
+        'http://proxy:8180/',
+      ]
     networks:
       edge: { ipv4_address: 172.30.0.11 }
     read_only: true

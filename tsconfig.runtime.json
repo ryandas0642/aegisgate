@@ -1,5 +1,10 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": { "noEmit": false, "outDir": "build/server", "rootDir": ".", "jsx": "react-jsx" },
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "build/server",
+    "rootDir": ".",
+    "jsx": "react-jsx"
+  },
   "include": ["control/**/*.ts", "scripts/backend.ts", "scripts/traffic.ts"]
 }

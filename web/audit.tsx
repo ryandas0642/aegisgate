@@ -1,6 +1,83 @@
 import { Badge, Empty, Panel } from './primitives';
 import { short, time, type ConsoleState } from './api';
-const label = (type: string) => ({ 'incident.detected': 'Deterministic incident detected', 'action.proposed': 'Bounded response proposed', 'human.approved': 'Operator approved exact proposal', 'human.rejected': 'Operator rejected proposal', 'action.requested': 'Enforcement intent recorded', 'action.applied': 'Proxy acknowledged application', 'action.verification': 'Outcome verification updated', 'action.uncertain': 'Enforcement acknowledgement uncertain', 'operator.signed_in': 'Local operator signed in', 'investigation.started': 'Live investigation started', 'investigation.completed': 'Investigation completed', 'investigation.unavailable': 'Investigation unavailable', 'telemetry.gap': 'Telemetry sequence gap detected', 'proxy.restarted': 'Proxy lifetime changed', 'telemetry.disconnected': 'Proxy telemetry disconnected' } as Record<string,string>)[type] || type.replace('investigation.', '').replaceAll('.', ' / ');
+const label = (type: string) =>
+  (
+    ({
+      'incident.detected': 'Deterministic incident detected',
+      'action.proposed': 'Bounded response proposed',
+      'human.approved': 'Operator approved exact proposal',
+      'human.rejected': 'Operator rejected proposal',
+      'action.requested': 'Enforcement intent recorded',
+      'action.applied': 'Proxy acknowledged application',
+      'action.verification': 'Outcome verification updated',
+      'action.uncertain': 'Enforcement acknowledgement uncertain',
+      'operator.signed_in': 'Local operator signed in',
+      'investigation.started': 'Live investigation started',
+      'investigation.completed': 'Investigation completed',
+      'investigation.unavailable': 'Investigation unavailable',
+      'telemetry.gap': 'Telemetry sequence gap detected',
+      'proxy.restarted': 'Proxy lifetime changed',
+      'telemetry.disconnected': 'Proxy telemetry disconnected',
+    }) as Record<string, string>
+  )[type] || type.replace('investigation.', '').replaceAll('.', ' / ');
 export function AuditView({ state }: { state: ConsoleState }) {
-  return <><div className="notice"><span>Chronological records link detections, actual model/tool activity, human decisions, and enforcement. The local hash chain detects edits; it is not an external trust anchor.</span><Badge tone={state.auditIntegrity ? 'green' : 'red'}>{state.auditIntegrity ? 'Chain intact' : 'Integrity check failed'}</Badge></div><Panel title="Audit trail" eyebrow="LATEST 100 RECORDS" action={<Badge tone="muted">Actual recorded events</Badge>}><div className="audit-list">{state.audit.length ? state.audit.map(record => <details className="audit-entry" key={record.id}><summary><span>#{record.seq}</span><time>{time(record.time)}</time><strong>{label(record.type)}</strong><Badge tone={record.type.startsWith('human.') ? 'amber' : record.type.includes('verification') ? 'green' : 'muted'}>{record.type.startsWith('human.') ? 'Human decision' : record.type.startsWith('investigation.') ? 'Investigation' : record.type.startsWith('action.') ? 'Enforcement' : 'System'}</Badge></summary><pre className="audit-detail">{JSON.stringify(record.payload, null, 2)}</pre><p className="mono muted">Previous {short(record.previous, 20)} · Record {short(record.digest, 20)}</p></details>) : <Empty title="No audit records yet" detail="Records appear as the running system observes detections and operator activity." icon="audit"/>}</div></Panel></>;
+  return (
+    <>
+      <div className="notice">
+        <span>
+          Chronological records link detections, actual model/tool activity, human decisions, and
+          enforcement. The local hash chain detects edits; it is not an external trust anchor.
+        </span>
+        <Badge tone={state.auditIntegrity ? 'green' : 'red'}>
+          {state.auditIntegrity ? 'Chain intact' : 'Integrity check failed'}
+        </Badge>
+      </div>
+      <Panel
+        title="Audit trail"
+        eyebrow="LATEST 100 RECORDS"
+        action={<Badge tone="muted">Actual recorded events</Badge>}
+      >
+        <div className="audit-list">
+          {state.audit.length ? (
+            state.audit.map((record) => (
+              <details className="audit-entry" key={record.id}>
+                <summary>
+                  <span>#{record.seq}</span>
+                  <time>{time(record.time)}</time>
+                  <strong>{label(record.type)}</strong>
+                  <Badge
+                    tone={
+                      record.type.startsWith('human.')
+                        ? 'amber'
+                        : record.type.includes('verification')
+                          ? 'green'
+                          : 'muted'
+                    }
+                  >
+                    {record.type.startsWith('human.')
+                      ? 'Human decision'
+                      : record.type.startsWith('investigation.')
+                        ? 'Investigation'
+                        : record.type.startsWith('action.')
+                          ? 'Enforcement'
+                          : 'System'}
+                  </Badge>
+                </summary>
+                <pre className="audit-detail">{JSON.stringify(record.payload, null, 2)}</pre>
+                <p className="mono muted">
+                  Previous {short(record.previous, 20)} · Record {short(record.digest, 20)}
+                </p>
+              </details>
+            ))
+          ) : (
+            <Empty
+              title="No audit records yet"
+              detail="Records appear as the running system observes detections and operator activity."
+              icon="audit"
+            />
+          )}
+        </div>
+      </Panel>
+    </>
+  );
 }

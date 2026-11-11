@@ -3,27 +3,457 @@ import { short, statusText, time, type ConsoleState } from './api';
 
 export function TrafficChart({ state }: { state: ConsoleState }) {
   const samples = state.samples;
-  if (samples.length < 2) return <Empty title="Waiting for a traffic window" detail="The graph fills with real proxy samples as requests arrive." icon="traffic"/>;
-  const points = samples.slice(1).map((s, i) => ({ at: s.at, requests: Math.max(0, s.requests - samples[i].requests) / Math.max(.1, (s.at - samples[i].at) / 1000), rejected: Math.max(0, s.denied + s.limited - samples[i].denied - samples[i].limited) / Math.max(.1, (s.at - samples[i].at) / 1000) }));
-  const max = Math.max(1, Math.ceil(Math.max(...points.map(p => p.requests)) / 5) * 5);
-  const coordinates = (field: 'requests' | 'rejected') => points.map((p, i) => `${44 + i / Math.max(1, points.length - 1) * 690},${180 - p[field] / max * 150}`).join(' ');
-  return <div className="chart"><div className="chart-legend"><span><i className="legend-dot cyan"/>Requests / sec</span><span><i className="legend-dot amber"/>Rejected / sec</span><small>Observed window · {Math.round((samples.at(-1)!.at - samples[0].at) / 1000)}s</small></div><svg viewBox="0 0 760 220" role="img" aria-label="Observed requests and security rejections per second"><defs><linearGradient id="traffic-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#31d2c0" stopOpacity=".18"/><stop offset="100%" stopColor="#31d2c0" stopOpacity="0"/></linearGradient></defs>{[0, 1, 2, 3].map(i => <g key={i}><line x1="44" y1={30 + i * 50} x2="734" y2={30 + i * 50} stroke="#1b2833" strokeDasharray="3 5"/><text x="32" y={34 + i * 50} textAnchor="end">{Math.round(max * (1 - i / 3))}</text></g>)}<polygon points={`44,180 ${coordinates('requests')} 734,180`} fill="url(#traffic-fill)"/><polyline points={coordinates('requests')} fill="none" stroke="#35d6c1" strokeWidth="2.4" strokeLinejoin="round"/><polyline points={coordinates('rejected')} fill="none" stroke="#eba953" strokeWidth="1.8" strokeLinejoin="round"/>{[0, .25, .5, .75, 1].map((n, i) => <text key={i} x={44 + n * 690} y="209" textAnchor={i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}>{time(points[Math.round(n * (points.length - 1))].at)}</text>)}</svg></div>;
+  if (samples.length < 2)
+    return (
+      <Empty
+        title="Waiting for a traffic window"
+        detail="The graph fills with real proxy samples as requests arrive."
+        icon="traffic"
+      />
+    );
+  const points = samples
+    .slice(1)
+    .map((s, i) => ({
+      at: s.at,
+      requests:
+        Math.max(0, s.requests - samples[i].requests) /
+        Math.max(0.1, (s.at - samples[i].at) / 1000),
+      rejected:
+        Math.max(0, s.denied + s.limited - samples[i].denied - samples[i].limited) /
+        Math.max(0.1, (s.at - samples[i].at) / 1000),
+    }));
+  const max = Math.max(1, Math.ceil(Math.max(...points.map((p) => p.requests)) / 5) * 5);
+  const coordinates = (field: 'requests' | 'rejected') =>
+    points
+      .map(
+        (p, i) =>
+          `${44 + (i / Math.max(1, points.length - 1)) * 690},${180 - (p[field] / max) * 150}`,
+      )
+      .join(' ');
+  return (
+    <div className="chart">
+      <div className="chart-legend">
+        <span>
+          <i className="legend-dot cyan" />
+          Requests / sec
+        </span>
+        <span>
+          <i className="legend-dot amber" />
+          Rejected / sec
+        </span>
+        <small>Observed window · {Math.round((samples.at(-1)!.at - samples[0].at) / 1000)}s</small>
+      </div>
+      <svg
+        viewBox="0 0 760 220"
+        role="img"
+        aria-label="Observed requests and security rejections per second"
+      >
+        <defs>
+          <linearGradient id="traffic-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#31d2c0" stopOpacity=".18" />
+            <stop offset="100%" stopColor="#31d2c0" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {[0, 1, 2, 3].map((i) => (
+          <g key={i}>
+            <line
+              x1="44"
+              y1={30 + i * 50}
+              x2="734"
+              y2={30 + i * 50}
+              stroke="#1b2833"
+              strokeDasharray="3 5"
+            />
+            <text x="32" y={34 + i * 50} textAnchor="end">
+              {Math.round(max * (1 - i / 3))}
+            </text>
+          </g>
+        ))}
+        <polygon points={`44,180 ${coordinates('requests')} 734,180`} fill="url(#traffic-fill)" />
+        <polyline
+          points={coordinates('requests')}
+          fill="none"
+          stroke="#35d6c1"
+          strokeWidth="2.4"
+          strokeLinejoin="round"
+        />
+        <polyline
+          points={coordinates('rejected')}
+          fill="none"
+          stroke="#eba953"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        {[0, 0.25, 0.5, 0.75, 1].map((n, i) => (
+          <text
+            key={i}
+            x={44 + n * 690}
+            y="209"
+            textAnchor={i === 0 ? 'start' : i === 4 ? 'end' : 'middle'}
+          >
+            {time(points[Math.round(n * (points.length - 1))].at)}
+          </text>
+        ))}
+      </svg>
+    </div>
+  );
 }
 export function BackendHealth({ state }: { state: ConsoleState }) {
-  const backends = state.snapshot?.backends ?? [], total = backends.reduce((sum, b) => sum + b.requests, 0);
-  return <div className="backend-list">{backends.length ? backends.map((b, index) => <div className="backend" key={b.id}><div className="backend-top"><span className="backend-icon"><Icon name="server" size={20}/></span><div><strong>{b.id}</strong><small>HTTP backend · {index + 1}</small></div><Badge tone={b.healthy ? 'green' : 'amber'} dot>{b.healthy ? 'Healthy' : b.failures ? 'Unavailable' : 'Checking'}</Badge></div><div className="backend-metrics"><span>Routing selections</span><strong>{b.requests.toLocaleString()} <small>{total ? Math.round(b.requests / total * 100) : 0}%</small></strong></div><div className="track"><i style={{ width: `${total ? b.requests / total * 100 : 0}%` }}/></div></div>) : <Empty title="No backend telemetry" detail="Start the proxy to inspect its configured backends." icon="server"/>}<div className="panel-footnote"><i className="dot cyan"/>Round robin · Healthy backends only</div></div>;
+  const backends = state.snapshot?.backends ?? [],
+    total = backends.reduce((sum, b) => sum + b.requests, 0);
+  return (
+    <div className="backend-list">
+      {backends.length ? (
+        backends.map((b, index) => (
+          <div className="backend" key={b.id}>
+            <div className="backend-top">
+              <span className="backend-icon">
+                <Icon name="server" size={20} />
+              </span>
+              <div>
+                <strong>{b.id}</strong>
+                <small>HTTP backend · {index + 1}</small>
+              </div>
+              <Badge tone={b.healthy ? 'green' : 'amber'} dot>
+                {b.healthy ? 'Healthy' : b.failures ? 'Unavailable' : 'Checking'}
+              </Badge>
+            </div>
+            <div className="backend-metrics">
+              <span>Routing selections</span>
+              <strong>
+                {b.requests.toLocaleString()}{' '}
+                <small>{total ? Math.round((b.requests / total) * 100) : 0}%</small>
+              </strong>
+            </div>
+            <div className="track">
+              <i style={{ width: `${total ? (b.requests / total) * 100 : 0}%` }} />
+            </div>
+          </div>
+        ))
+      ) : (
+        <Empty
+          title="No backend telemetry"
+          detail="Start the proxy to inspect its configured backends."
+          icon="server"
+        />
+      )}
+      <div className="panel-footnote">
+        <i className="dot cyan" />
+        Round robin · Healthy backends only
+      </div>
+    </div>
+  );
 }
-export function IncidentTable({ state, choose, limit = 20 }: { state: ConsoleState; choose: (id: string, next?: string) => void; limit?: number }) {
-  if (!state.incidents.length) return <Empty title="No incidents detected" detail="Detections appear here when a configured security or reliability threshold is crossed." icon="check"/>;
-  return <div className="table-scroll"><table><thead><tr><th>INCIDENT</th><th>SOURCE / TARGET</th><th>STATUS</th><th>DETECTED</th><th/></tr></thead><tbody>{state.incidents.slice(0, limit).map(incident => <tr key={incident.id} onClick={() => choose(incident.id)} tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') choose(incident.id); }}><td><div className="incident-name"><span className={`incident-symbol ${incident.kind}`}><Icon name={incident.kind === 'security' ? 'shield' : 'server'} size={17}/></span><span><strong>{incident.kind === 'security' ? 'Source violation threshold' : 'Backend health degraded'}</strong><small>{incident.kind === 'security' ? 'Deterministic security rule' : 'Deterministic health checks'} · {short(incident.id, 8)}</small></span></div></td><td><code>{incident.source || incident.backend}</code></td><td><Badge tone={incident.status === 'awaiting_approval' ? 'amber' : incident.status === 'unavailable' ? 'muted' : 'cyan'}>{statusText(incident.status)}</Badge></td><td className="muted mono">{time(incident.createdAt)}</td><td><Icon name="chevron" size={16}/></td></tr>)}</tbody></table></div>;
+export function IncidentTable({
+  state,
+  choose,
+  limit = 20,
+}: {
+  state: ConsoleState;
+  choose: (id: string, next?: string) => void;
+  limit?: number;
+}) {
+  if (!state.incidents.length)
+    return (
+      <Empty
+        title="No incidents detected"
+        detail="Detections appear here when a configured security or reliability threshold is crossed."
+        icon="check"
+      />
+    );
+  return (
+    <div className="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>INCIDENT</th>
+            <th>SOURCE / TARGET</th>
+            <th>STATUS</th>
+            <th>DETECTED</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {state.incidents.slice(0, limit).map((incident) => (
+            <tr
+              key={incident.id}
+              onClick={() => choose(incident.id)}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') choose(incident.id);
+              }}
+            >
+              <td>
+                <div className="incident-name">
+                  <span className={`incident-symbol ${incident.kind}`}>
+                    <Icon name={incident.kind === 'security' ? 'shield' : 'server'} size={17} />
+                  </span>
+                  <span>
+                    <strong>
+                      {incident.kind === 'security'
+                        ? 'Source violation threshold'
+                        : 'Backend health degraded'}
+                    </strong>
+                    <small>
+                      {incident.kind === 'security'
+                        ? 'Deterministic security rule'
+                        : 'Deterministic health checks'}{' '}
+                      · {short(incident.id, 8)}
+                    </small>
+                  </span>
+                </div>
+              </td>
+              <td>
+                <code>{incident.source || incident.backend}</code>
+              </td>
+              <td>
+                <Badge
+                  tone={
+                    incident.status === 'awaiting_approval'
+                      ? 'amber'
+                      : incident.status === 'unavailable'
+                        ? 'muted'
+                        : 'cyan'
+                  }
+                >
+                  {statusText(incident.status)}
+                </Badge>
+              </td>
+              <td className="muted mono">{time(incident.createdAt)}</td>
+              <td>
+                <Icon name="chevron" size={16} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
-export function Overview({ state, navigate, choose }: { state: ConsoleState; navigate: (tab: string) => void; choose: (id: string, next?: string) => void }) {
-  const snapshot = state.snapshot, metrics = snapshot?.metrics;
-  const end = state.samples.at(-1), start = state.samples[Math.max(0, state.samples.length - 11)];
-  const rps = end && start && end.at > start.at ? Math.max(0, (end.requests - start.requests) / ((end.at - start.at) / 1000)) : 0;
-  const healthy = snapshot?.backends.filter(b => b.healthy).length ?? 0, pending = state.proposals.filter(p => p.status === 'proposed').length;
-  const latest = state.incidents[0], proposal = state.proposals.find(p => p.content.incidentId === latest?.id);
-  const stages = ['Traffic', 'Detection', 'Investigation', 'Human review', 'Response', 'Verification'];
-  const stage = proposal ? ['verified', 'expired'].includes(proposal.status) ? 5 : ['applied', 'executing', 'inconclusive', 'uncertain'].includes(proposal.status) ? 4 : 3 : latest ? latest.finding ? 3 : latest.status === 'investigating' ? 2 : 1 : 0;
-  return <><div className="metric-grid"><div className="metric-card"><div className="metric-label">REQUEST RATE<Icon name="traffic" size={18}/></div><div className="metric-value">{metrics ? rps.toFixed(1) : '—'}<small>req/s</small></div><div className="metric-note">{metrics ? metrics.requests.toLocaleString() : '—'} admitted requests this proxy lifetime</div><div className="metric-accent cyan"/></div><div className="metric-card"><div className="metric-label">HEALTHY BACKENDS<Icon name="server" size={18}/></div><div className="metric-value">{snapshot ? healthy : '—'}<small>/ {snapshot?.backends.length ?? '—'}</small></div><div className="metric-note"><i className={healthy ? 'dot green' : 'dot amber'}/>{snapshot && healthy === snapshot.backends.length ? 'All backends available' : 'Health checks determine routing'}</div></div><div className="metric-card"><div className="metric-label">SECURITY REJECTIONS<Icon name="shield" size={18}/></div><div className="metric-value">{metrics ? (metrics.denied + metrics.limited).toLocaleString() : '—'}</div><div className="metric-note">{metrics?.limited ?? 0} rate limited <span>·</span> {metrics?.denied ?? 0} denied</div></div><div className="metric-card"><div className="metric-label">AWAITING APPROVAL<Icon name="lock" size={18}/></div><div className="metric-value">{pending.toString().padStart(2, '0')}<Badge tone={pending ? 'amber' : 'muted'}>{pending ? 'Review needed' : 'No pending actions'}</Badge></div><button className="text-button" onClick={() => navigate('response')}>Open response center<Icon name="arrow" size={14}/></button></div></div><div className="overview-grid"><Panel title="Traffic at the edge" eyebrow="DATA PLANE" action={<button className="text-button" onClick={() => navigate('traffic')}>Inspect traffic<Icon name="arrow" size={14}/></button>}><TrafficChart state={state}/></Panel><Panel title="Backend health" eyebrow="ROUTING POOL" action={<Badge tone="muted">{snapshot?.backends.length ?? 0} services</Badge>}><BackendHealth state={state}/></Panel></div><section className="lifecycle"><div className="lifecycle-heading"><span className="lifecycle-icon"><Icon name="agent" size={22}/></span><div><h2>From signal to supervised response.</h2><p>{latest ? `Latest incident · ${short(latest.id, 8)}` : 'The investigation starts when a real detection arrives.'}</p></div><Badge tone={state.provider.configured ? 'cyan' : 'muted'}>{state.provider.configured ? 'Provider configured' : 'AI not configured'}</Badge></div><div className="lifecycle-track">{stages.map((label, index) => <div className={index < stage ? 'step done' : index === stage ? 'step current' : 'step'} key={label}><span>{index < stage ? <Icon name="check" size={13}/> : String(index + 1).padStart(2, '0')}</span><strong>{label}</strong>{index < 5 && <i/>}</div>)}</div><div className="lifecycle-note"><Icon name="lock" size={13}/><span>Automatic routing stays deterministic. Every agent-proposed change requires your approval.</span></div></section><div className="overview-bottom"><Panel title="Recent incidents" eyebrow="DETECTION FEED" action={<button className="text-button" onClick={() => navigate('incidents')}>View all<Icon name="arrow" size={14}/></button>}><IncidentTable state={state} choose={choose} limit={4}/></Panel><Panel title="Controls in place" eyebrow="ENFORCEMENT"><div className="control-list"><div><span className="control-check"><Icon name="check" size={15}/></span><span>Peer IP identity<small>Forwarding headers are untrusted</small></span></div><div><span className="control-check"><Icon name="check" size={15}/></span><span>Per-client rate limit<small>{snapshot?.limits.ratePerSecond ?? '—'} req/s · burst {snapshot?.limits.burst ?? '—'}</small></span></div><div><span className="control-check"><Icon name="check" size={15}/></span><span>Bounded HTTP requests<small>64 KiB body · 16 KiB headers</small></span></div><div><span className="control-check"><Icon name="clock" size={15}/></span><span>Temporary source denies<small>{snapshot?.rules.length ?? 0} active · proxy-enforced expiration</small></span></div></div></Panel></div></>;
+export function Overview({
+  state,
+  navigate,
+  choose,
+}: {
+  state: ConsoleState;
+  navigate: (tab: string) => void;
+  choose: (id: string, next?: string) => void;
+}) {
+  const snapshot = state.snapshot,
+    metrics = snapshot?.metrics;
+  const end = state.samples.at(-1),
+    start = state.samples[Math.max(0, state.samples.length - 11)];
+  const rps =
+    end && start && end.at > start.at
+      ? Math.max(0, (end.requests - start.requests) / ((end.at - start.at) / 1000))
+      : 0;
+  const healthy = snapshot?.backends.filter((b) => b.healthy).length ?? 0,
+    pending = state.proposals.filter((p) => p.status === 'proposed').length;
+  const latest = state.incidents[0],
+    proposal = state.proposals.find((p) => p.content.incidentId === latest?.id);
+  const stages = [
+    'Traffic',
+    'Detection',
+    'Investigation',
+    'Human review',
+    'Response',
+    'Verification',
+  ];
+  const stage = proposal
+    ? ['verified', 'expired'].includes(proposal.status)
+      ? 5
+      : ['applied', 'executing', 'inconclusive', 'uncertain'].includes(proposal.status)
+        ? 4
+        : 3
+    : latest
+      ? latest.finding
+        ? 3
+        : latest.status === 'investigating'
+          ? 2
+          : 1
+      : 0;
+  return (
+    <>
+      <div className="metric-grid">
+        <div className="metric-card">
+          <div className="metric-label">
+            REQUEST RATE
+            <Icon name="traffic" size={18} />
+          </div>
+          <div className="metric-value">
+            {metrics ? rps.toFixed(1) : '—'}
+            <small>req/s</small>
+          </div>
+          <div className="metric-note">
+            {metrics ? metrics.requests.toLocaleString() : '—'} admitted requests this proxy
+            lifetime
+          </div>
+          <div className="metric-accent cyan" />
+        </div>
+        <div className="metric-card">
+          <div className="metric-label">
+            HEALTHY BACKENDS
+            <Icon name="server" size={18} />
+          </div>
+          <div className="metric-value">
+            {snapshot ? healthy : '—'}
+            <small>/ {snapshot?.backends.length ?? '—'}</small>
+          </div>
+          <div className="metric-note">
+            <i className={healthy ? 'dot green' : 'dot amber'} />
+            {snapshot && healthy === snapshot.backends.length
+              ? 'All backends available'
+              : 'Health checks determine routing'}
+          </div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-label">
+            SECURITY REJECTIONS
+            <Icon name="shield" size={18} />
+          </div>
+          <div className="metric-value">
+            {metrics ? (metrics.denied + metrics.limited).toLocaleString() : '—'}
+          </div>
+          <div className="metric-note">
+            {metrics?.limited ?? 0} rate limited <span>·</span> {metrics?.denied ?? 0} denied
+          </div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-label">
+            AWAITING APPROVAL
+            <Icon name="lock" size={18} />
+          </div>
+          <div className="metric-value">
+            {pending.toString().padStart(2, '0')}
+            <Badge tone={pending ? 'amber' : 'muted'}>
+              {pending ? 'Review needed' : 'No pending actions'}
+            </Badge>
+          </div>
+          <button className="text-button" onClick={() => navigate('response')}>
+            Open response center
+            <Icon name="arrow" size={14} />
+          </button>
+        </div>
+      </div>
+      <div className="overview-grid">
+        <Panel
+          title="Traffic at the edge"
+          eyebrow="DATA PLANE"
+          action={
+            <button className="text-button" onClick={() => navigate('traffic')}>
+              Inspect traffic
+              <Icon name="arrow" size={14} />
+            </button>
+          }
+        >
+          <TrafficChart state={state} />
+        </Panel>
+        <Panel
+          title="Backend health"
+          eyebrow="ROUTING POOL"
+          action={<Badge tone="muted">{snapshot?.backends.length ?? 0} services</Badge>}
+        >
+          <BackendHealth state={state} />
+        </Panel>
+      </div>
+      <section className="lifecycle">
+        <div className="lifecycle-heading">
+          <span className="lifecycle-icon">
+            <Icon name="agent" size={22} />
+          </span>
+          <div>
+            <h2>From signal to supervised response.</h2>
+            <p>
+              {latest
+                ? `Latest incident · ${short(latest.id, 8)}`
+                : 'The investigation starts when a real detection arrives.'}
+            </p>
+          </div>
+          <Badge tone={state.provider.configured ? 'cyan' : 'muted'}>
+            {state.provider.configured ? 'Provider configured' : 'AI not configured'}
+          </Badge>
+        </div>
+        <div className="lifecycle-track">
+          {stages.map((label, index) => (
+            <div
+              className={index < stage ? 'step done' : index === stage ? 'step current' : 'step'}
+              key={label}
+            >
+              <span>
+                {index < stage ? (
+                  <Icon name="check" size={13} />
+                ) : (
+                  String(index + 1).padStart(2, '0')
+                )}
+              </span>
+              <strong>{label}</strong>
+              {index < 5 && <i />}
+            </div>
+          ))}
+        </div>
+        <div className="lifecycle-note">
+          <Icon name="lock" size={13} />
+          <span>
+            Automatic routing stays deterministic. Every agent-proposed change requires your
+            approval.
+          </span>
+        </div>
+      </section>
+      <div className="overview-bottom">
+        <Panel
+          title="Recent incidents"
+          eyebrow="DETECTION FEED"
+          action={
+            <button className="text-button" onClick={() => navigate('incidents')}>
+              View all
+              <Icon name="arrow" size={14} />
+            </button>
+          }
+        >
+          <IncidentTable state={state} choose={choose} limit={4} />
+        </Panel>
+        <Panel title="Controls in place" eyebrow="ENFORCEMENT">
+          <div className="control-list">
+            <div>
+              <span className="control-check">
+                <Icon name="check" size={15} />
+              </span>
+              <span>
+                Peer IP identity<small>Forwarding headers are untrusted</small>
+              </span>
+            </div>
+            <div>
+              <span className="control-check">
+                <Icon name="check" size={15} />
+              </span>
+              <span>
+                Per-client rate limit
+                <small>
+                  {snapshot?.limits.ratePerSecond ?? '—'} req/s · burst{' '}
+                  {snapshot?.limits.burst ?? '—'}
+                </small>
+              </span>
+            </div>
+            <div>
+              <span className="control-check">
+                <Icon name="check" size={15} />
+              </span>
+              <span>
+                Bounded HTTP requests<small>64 KiB body · 16 KiB headers</small>
+              </span>
+            </div>
+            <div>
+              <span className="control-check">
+                <Icon name="clock" size={15} />
+              </span>
+              <span>
+                Temporary source denies
+                <small>{snapshot?.rules.length ?? 0} active · proxy-enforced expiration</small>
+              </span>
+            </div>
+          </div>
+        </Panel>
+      </div>
+    </>
+  );
 }
