@@ -1,5 +1,5 @@
 {
-  "listen": "127.0.0.1", "port": 8080,
+  "listen": "127.0.0.1", "port": 8180,
   "adminListen": "127.0.0.1", "adminPort": 9090,
   "healthPath": "/health", "healthIntervalMs": 500, "healthTimeoutMs": 400,
   "failureThreshold": 2, "recoveryThreshold": 2, "requestTimeoutMs": 3000,
