@@ -22,7 +22,7 @@ export function TrafficChart({ state }: { state: ConsoleState }) {
         Math.max(0, s.denied + s.limited - samples[i].denied - samples[i].limited) /
         Math.max(0.1, (s.at - samples[i].at) / 1000),
     }));
-  const max = Math.max(1, Math.ceil(Math.max(...points.map((p) => p.requests)) / 5) * 5);
+  const max = Math.max(5, Math.ceil(Math.max(...points.map((p) => p.requests)) / 5) * 5);
   const coordinates = (field: 'requests' | 'rejected') =>
     points
       .map(

@@ -38,6 +38,12 @@ try {
   await page.getByLabel('Operator password').fill(config.operatorPassword);
   await page.getByRole('button', { name: 'Open operations console' }).click();
   await page.getByText('Live telemetry', { exact: true }).waitFor();
+  await page.evaluate(async () => {
+    const session = await (await fetch('/api/session')).json();
+    const state = await (await fetch('/api/state')).json();
+    for (const proposal of state.proposals) if (proposal.status === 'proposed' && proposal.content.rationale.startsWith('Browser acceptance proposal')) await fetch(`/api/proposals/${proposal.id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': session.csrf }, body: JSON.stringify({ hash: proposal.hash }) });
+  });
+  const beforeRequests = await page.evaluate(async () => (await (await fetch('/api/state')).json()).snapshot.metrics.requests as number);
   for (let i = 0; i < 6; i++) assert.equal(await synthetic('127.0.0.1'), 200);
   const codes = [];
   for (let i = 0; i < 60; i++) codes.push(await synthetic('127.0.0.2'));
@@ -52,6 +58,7 @@ try {
   const incidentId = String(await choice.jsonValue());
   await page.getByRole('row').filter({ hasText: incidentId.slice(0, 8) }).click();
   await page.getByRole('button', { name: 'Overview', exact: true }).click();
+  await page.waitForFunction(minimum => Number(document.querySelector('.metric-grid .metric-note')?.textContent?.match(/[\d,]+/)?.[0].replaceAll(',', '') || 0) >= minimum, beforeRequests + 66);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'desktop document must not overflow horizontally');
   await page.screenshot({ path: resolve(output, 'overview.png'), fullPage: true });
   for (const label of ['Traffic & health', 'Investigation', 'Response center', 'Audit trail']) {
@@ -93,6 +100,7 @@ try {
           'real synthetic rate-limit detection',
           'all navigation views',
           'manual fallback dialog',
+          'explicit approval checkbox gate (cancelled without enforcement)',
           '390px responsive layout',
           'no browser runtime errors',
         ],
