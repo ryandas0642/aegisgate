@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { resolve, dirname, delimiter } from 'node:path';
+import { resolve } from 'node:path';
+import { compilerRuntimePath } from './compiler_runtime.js';
 import { settings } from '../control/settings.js';
 const config = settings(),
   children = new Map<string, ChildProcess>();
@@ -12,16 +13,12 @@ if (!existsSync(executable)) throw new Error('Build the proxy first: npm run bui
 if (!existsSync('dist/index.html')) throw new Error('Build the dashboard first: npm run build');
 function launch(name: string, command: string, args: string[], extra: Record<string, string> = {}) {
   if (children.has(name)) return;
-  const compilerBin = process.env.CXX ? dirname(process.env.CXX) : 'C:\\msys64\\mingw64\\bin';
   const child = spawn(command, args, {
     stdio: ['ignore', 'inherit', 'inherit'],
     windowsHide: true,
     env: {
       ...process.env,
-      PATH:
-        process.platform === 'win32'
-          ? compilerBin + delimiter + process.env.PATH
-          : process.env.PATH,
+      PATH: compilerRuntimePath(),
       ...extra,
     },
   });

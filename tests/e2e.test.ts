@@ -13,6 +13,7 @@ import { ProxyClient } from '../control/proxy.js';
 import { investigate } from '../control/agent.js';
 import { investigateTool } from '../control/tools.js';
 import type { Decision, Snapshot } from '../control/types.js';
+import { compilerRuntimePath } from '../scripts/compiler_runtime.js';
 
 async function until<T>(
   operation: () => Promise<T> | T,
@@ -94,10 +95,7 @@ test(
     const env = {
       ...process.env,
       AEGIS_PROXY_TOKEN: token,
-      PATH:
-        process.platform === 'win32'
-          ? 'C:\\msys64\\mingw64\\bin;' + process.env.PATH
-          : process.env.PATH,
+      PATH: compilerRuntimePath(),
     };
     const processProxy = spawn(
       resolve('build', process.platform === 'win32' ? 'aegis-proxy.exe' : 'aegis-proxy'),

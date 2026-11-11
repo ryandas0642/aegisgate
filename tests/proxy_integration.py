@@ -6,6 +6,7 @@ import http.client
 import json
 import os
 import socket
+import shutil
 import subprocess
 import threading
 import time
@@ -114,7 +115,9 @@ def proxy(**overrides):
     path.write_text(json.dumps(config))
     env = {**os.environ, "AEGIS_PROXY_TOKEN": TOKEN}
     if os.name == "nt":
-        env["PATH"] = "C:\\msys64\\mingw64\\bin;" + env["PATH"]
+        compiler = os.environ.get("CXX") or shutil.which("g++")
+        if compiler:
+            env["PATH"] = str(Path(compiler).parent) + os.pathsep + env["PATH"]
     executable = ROOT / "build" / ("aegis-proxy.exe" if os.name == "nt" else "aegis-proxy")
     process = subprocess.Popen([str(executable), str(path)], cwd=ROOT, env=env,
                                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
