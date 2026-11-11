@@ -74,6 +74,7 @@ export class Broker {
       mode,
     };
     this.store.transaction(() => {
+      if (this.store.proposals().some(p => p.content.incidentId === incidentId && ['proposed', 'executing', 'applied', 'verified', 'uncertain', 'inconclusive'].includes(p.status))) throw new Error('This incident already has an active proposal');
       this.store.putProposal(proposal);
       incident.status = 'awaiting_approval';
       this.store.putIncident(incident);
@@ -152,6 +153,8 @@ export class Broker {
     proposal.status = 'rejected';
     this.store.transaction(() => {
       this.store.putProposal(proposal);
+      const incident = this.store.incident(proposal.content.incidentId);
+      if (incident) { incident.status = incident.finding ? 'investigated' : 'unavailable'; this.store.putIncident(incident); }
       this.store.audit('human.rejected', {
         id,
         proposalHash: expectedHash,
@@ -162,6 +165,13 @@ export class Broker {
   }
   reconcile(snapshot: Snapshot): void {
     for (const proposal of this.store.proposals()) {
+      if (proposal.status === 'proposed' && (Date.now() > proposal.approvalDeadline || snapshot.epoch !== proposal.content.expectedEpoch || snapshot.revision !== proposal.content.expectedRevision)) {
+        proposal.status = 'stale'; this.store.putProposal(proposal);
+        const incident = this.store.incident(proposal.content.incidentId);
+        if (incident) { incident.status = incident.finding ? 'investigated' : 'unavailable'; this.store.putIncident(incident); }
+        this.store.audit('proposal.invalidated', { id: proposal.id, reason: 'Approval window expired or configuration changed' });
+        continue;
+      }
       if (
         !['executing', 'uncertain', 'applied', 'verified', 'inconclusive'].includes(proposal.status)
       )
@@ -191,13 +201,13 @@ export class Broker {
                   e.type === 'request.completed',
               )
           : [];
-        const denied = after.find((e) => e.source === proposal.content.source && e.status === 403);
+        const denied = after.find((e) => e.source === proposal.content.source && e.status === 403) || (typeof proposal.verification?.deniedEvidence === 'string' ? this.store.evidence(proposal.verification.deniedEvidence) : undefined);
         const control = after.find(
           (e) =>
             e.source !== proposal.content.source &&
             Number(e.status) >= 200 &&
             Number(e.status) < 400,
-        );
+        ) || (typeof proposal.verification?.controlTrafficEvidence === 'string' ? this.store.evidence(proposal.verification.controlTrafficEvidence) : undefined);
         const installed = snapshot.rules.some(
           (rule) => rule.actionId === proposal.id && rule.source === proposal.content.source,
         );
@@ -211,6 +221,7 @@ export class Broker {
         } else if (installed) {
           proposal.status = denied && control ? 'verified' : 'inconclusive';
           proposal.verification = {
+            ...proposal.verification,
             outcome: proposal.status,
             ruleInstalled: true,
             deniedEvidence: denied?.id ?? null,
