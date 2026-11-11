@@ -16,7 +16,7 @@ Return only the structured decision. Plans and explanations must be brief operat
 Tool turns have finding=null and proposal=null. Final turns have requests=[] and a finding. Each tool takes {limit:1..100}.`;
 
 export function inferenceConfig(env = process.env, path = '.env') {
-  const local = existsSync(path) ? parseEnv(readFileSync(path, 'utf8')) : {};
+  const local = (existsSync(path) ? parseEnv(readFileSync(path, 'utf8')) : {}) as Record<string, string>;
   const key = (env.OPENROUTER_API_KEY || local.OPENROUTER_API_KEY || '').trim();
   const model = (env.OPENROUTER_MODEL || local.OPENROUTER_MODEL || 'openai/gpt-4.1-mini').trim();
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.:-]+$/.test(model)) throw new Error('Configure an explicit provider/model ID');
