@@ -12,8 +12,21 @@ export const finding = {
 test('strict decisions reject invented evidence, unauthorized tools, and malformed arguments', () => {
   const valid = { plan: ['Read the incident.'], requests: [], finding, proposal: null };
   assert.ok(validateDecision(valid, evidence));
-  assert.throws(() => validateDecision({ ...valid, finding: { ...finding, summary: '' } }, evidence));
-  assert.throws(() => validateDecision({ ...valid, finding: { ...finding, observations: [{ text: 'Actual observation', evidenceIds: ['event-1', 'event-1'] }] } }, evidence));
+  assert.throws(() =>
+    validateDecision({ ...valid, finding: { ...finding, summary: '' } }, evidence),
+  );
+  assert.throws(() =>
+    validateDecision(
+      {
+        ...valid,
+        finding: {
+          ...finding,
+          observations: [{ text: 'Actual observation', evidenceIds: ['event-1', 'event-1'] }],
+        },
+      },
+      evidence,
+    ),
+  );
   assert.throws(() => validateDecision({ ...valid, shell: 'anything' }, evidence));
   assert.throws(() =>
     validateDecision(

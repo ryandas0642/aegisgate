@@ -52,7 +52,11 @@ export class Provider {
       provider: { require_parameters: true },
       response_format: {
         type: 'json_schema',
-        json_schema: { name: 'investigation_decision', strict: true, schema: providerDecisionSchema },
+        json_schema: {
+          name: 'investigation_decision',
+          strict: true,
+          schema: providerDecisionSchema,
+        },
       },
     };
     for (let attempt = 0; attempt < 2; attempt++) {

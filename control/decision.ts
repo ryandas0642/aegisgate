@@ -87,9 +87,12 @@ const validate = ajv.compile(decisionSchema);
 // Keep length/uniqueness authoritative locally; send the portable provider subset.
 function providerSchema(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(providerSchema);
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value)
-    .filter(([key]) => !['minLength', 'maxLength', 'uniqueItems'].includes(key))
-    .map(([key, child]) => [key, providerSchema(child)]));
+  if (value && typeof value === 'object')
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => !['minLength', 'maxLength', 'uniqueItems'].includes(key))
+        .map(([key, child]) => [key, providerSchema(child)]),
+    );
   return value;
 }
 export const providerDecisionSchema = providerSchema(decisionSchema);
