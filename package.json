@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "tsx scripts/dev.ts",
+    "demo": "npm run build && tsx scripts/dev.ts",
     "dev:ui": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build && tsx scripts/notices.ts",
     "build:proxy": "python scripts/build_proxy.py",
