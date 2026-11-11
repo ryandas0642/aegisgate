@@ -21,5 +21,11 @@ State::State(Config value,std::string secret):config(std::move(value)),token(std
     if(token.size()<32||token.size()>256) throw std::runtime_error("AEGIS_PROXY_TOKEN must contain 32 to 256 characters");
     std::random_device random; std::ostringstream id; id<<std::hex<<random()<<random()<<random()<<random(); epoch=id.str();
 }
+void State::emit(const std::string& type,json::object fields) {
+    fields["sequence"]=++sequence; fields["id"]=epoch+":"+std::to_string(sequence);
+    fields["time"]=utcNow(); fields["type"]=type; fields["epoch"]=epoch;
+    if(events.size()>=2048) events.pop_front();
+    events.push_back(std::move(fields));
+}
 // state methods
 }
