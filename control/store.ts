@@ -52,5 +52,16 @@ export class Store {
       this.set('connection', { online: true, receivedAt: Date.now(), error: null });
     });
   }
-  // store methods
+  auditRecords(limit = 100): Record<string, unknown>[] {
+    return (this.db.prepare('SELECT * FROM audit ORDER BY seq DESC LIMIT ?').all(Math.min(500, limit)) as Record<string, unknown>[]).map(row => ({ ...row, payload: JSON.parse(String(row.payload)) }));
+  }
+  verifyAudit(): boolean {
+    let previous = '0'.repeat(64), sequence = 0;
+    for (const row of this.db.prepare('SELECT * FROM audit ORDER BY seq').all() as { seq: number; id: string; time: string; type: string; payload: string; previous: string; digest: string }[]) {
+      const record = { seq: row.seq, id: row.id, time: row.time, type: row.type, payload: JSON.parse(row.payload), previous: row.previous };
+      if (row.seq !== ++sequence || row.previous !== previous || hash(record) !== row.digest) return false;
+      previous = row.digest;
+    }
+    return true;
+  }
 }
