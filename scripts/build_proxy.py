@@ -1,4 +1,4 @@
-"""Build with system Boost or the pinned local headers; works on Linux and Windows."""
+"""Build with pinned Boost, or explicitly supplied BOOST_ROOT headers."""
 from pathlib import Path
 import os
 import shutil
@@ -10,9 +10,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def build():
-    boost = Path(os.environ.get("BOOST_ROOT", "/usr/include"))
-    if not (boost / "boost" / "beast.hpp").exists():
-        boost = bootstrap()
+    custom_boost = os.environ.get("BOOST_ROOT")
+    boost = Path(custom_boost) if custom_boost else bootstrap()
+    if not (boost / "boost" / "beast.hpp").exists() or not (boost / "boost" / "json" / "src.hpp").exists():
+        raise RuntimeError("BOOST_ROOT must provide both Beast and Boost.JSON implementation headers")
     compiler = os.environ.get("CXX") or shutil.which("g++")
     if not compiler:
         raise RuntimeError("Install a C++20 g++ compiler and put it on PATH")
