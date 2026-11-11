@@ -41,7 +41,7 @@ export class Provider {
         throw new Error(`Model provider rejected the request (HTTP ${response.status})`);
       }
       const choice = data.choices?.[0];
-      if (typeof data.id !== 'string' || typeof data.model !== 'string' || choice?.finish_reason !== 'stop' || typeof choice.message?.content !== 'string' || choice.message?.tool_calls?.length) throw new Error('Incomplete or unsupported provider response');
+      if (typeof data.id !== 'string' || !data.id.trim() || typeof data.model !== 'string' || !data.model.trim() || choice?.finish_reason !== 'stop' || typeof choice.message?.content !== 'string' || choice.message?.tool_calls?.length) throw new Error('Incomplete or unsupported provider response');
       const content = String(choice.message.content).split(this.config.key).join('[REDACTED]');
       const decision = validateDecision(redact(JSON.parse(content)), evidence);
       const result: ModelReply = { decision, requestId: data.id, model: data.model, usage: redact(data.usage ?? null), mode: 'live' };
