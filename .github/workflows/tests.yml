@@ -1,0 +1,29 @@
+name: AegisGate acceptance
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  local-system:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: .deps/boost_1_90_0
+          key: boost-1.90.0-5e93d582
+      - run: npm ci
+      - run: npm run build:proxy
+      - run: npm run build
+      - run: npm run build:runtime
+      - run: npm test
+      - run: npm run test:proxy
+      - run: npm run test:e2e
+      - run: npm audit --audit-level=moderate
