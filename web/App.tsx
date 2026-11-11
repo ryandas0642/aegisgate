@@ -327,6 +327,7 @@ export function App() {
             />
           )}
           {state && tab === 'audit' && <AuditView state={state} />}
+          {state && !online && <div className="notice"><span>Proxy telemetry is offline. Displayed values were last observed at {time(state.connection.receivedAt)}. Approvals require fresh proxy state.</span></div>}
           {!state && <div className="loading">Connecting to the operations control plane…</div>}
           <footer className="content-footer">
             <span>

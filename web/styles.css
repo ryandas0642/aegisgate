@@ -753,7 +753,7 @@ code,
   margin: 0 9px 0 6px;
 }
 .step:last-child {
-  flex: 0;
+  flex: 1;
 }
 .step.current {
   color: #b5e0d8;
