@@ -45,6 +45,7 @@ try {
   await page.getByRole('button', { name: 'Incidents', exact: true }).click();
   await page.getByText('Source violation threshold', { exact: true }).first().waitFor();
   await page.getByRole('button', { name: 'Overview', exact: true }).click();
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'desktop document must not overflow horizontally');
   await page.screenshot({ path: resolve(output, 'overview.png'), fullPage: true });
   for (const label of ['Traffic & health', 'Investigation', 'Response center', 'Audit trail']) {
     await page.getByRole('button', { name: label, exact: true }).click();
@@ -57,7 +58,16 @@ try {
   if (await page.getByRole('button', { name: 'Create manual proposal', exact: true }).count()) {
     await page.getByRole('button', { name: 'Create manual proposal', exact: true }).click();
     await page.getByRole('dialog').waitFor();
-    await page.getByRole('button', { name: 'Close manual proposal' }).click();
+    await page.getByLabel('Evidence-based rationale').fill('Browser acceptance proposal supported by actual synthetic source violations. This is a manual test proposal, not a model finding.');
+    await page.getByRole('button', { name: 'Create reviewable proposal', exact: true }).click();
+    await page.getByRole('button', { name: 'Review & approve', exact: true }).click();
+    const approve = page.getByRole('button', { name: 'Approve temporary deny', exact: true });
+    assert.ok(await approve.isDisabled());
+    await page.getByRole('checkbox').check(); assert.ok(await approve.isEnabled());
+    await page.screenshot({ path: resolve(output, 'approval-review.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.screenshot({ path: resolve(output, 'response-center.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Reject proposal', exact: true }).click();
   }
   await page.getByRole('button', { name: 'Overview', exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
