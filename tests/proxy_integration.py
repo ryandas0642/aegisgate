@@ -122,6 +122,30 @@ def proxy(**overrides):
 
 
 class ProxyTests(unittest.TestCase):
+    def test_health_failure_removal_recovery_and_no_backends(self):
+        with proxy() as (c, state, a, b):
+            port = a.server_port
+            a.shutdown(); a.server_close()
+            eventually(state, lambda s: not s["backends"][0]["healthy"])
+            self.assertEqual([json.loads(request(c["port"])[2])["backend"] for _ in range(3)], ["b"] * 3)
+            recovered = backend("a", port)
+            try:
+                eventually(state, lambda s: s["backends"][0]["healthy"])
+                self.assertEqual({json.loads(request(c["port"])[2])["backend"] for _ in range(4)}, {"a", "b"})
+            finally:
+                recovered.shutdown(); recovered.server_close()
+            b.shutdown(); b.server_close()
+            eventually(state, lambda s: not any(x["healthy"] for x in s["backends"]))
+            self.assertEqual(request(c["port"])[0], 503)
+
+    def test_upstream_timeout_and_connection_failure(self):
+        with proxy(healthIntervalMs=1000, recoveryThreshold=1, failureThreshold=10) as (c, state, a, b):
+            self.assertEqual(request(c["port"], path="/slow")[0], 504)
+            a.shutdown(); a.server_close()
+            codes = [request(c["port"])[0] for _ in range(2)]
+            self.assertIn(502, codes)
+            self.assertIn(200, codes)
+
     def test_forwarding_round_robin_post_head_and_header_trust(self):
         with proxy() as (c, state, *_):
             replies = [request(c["port"], headers={"X-Forwarded-For": "198.51.100.9"}) for _ in range(4)]
