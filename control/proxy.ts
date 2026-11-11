@@ -1,6 +1,10 @@
 import { boundedJson } from './http.js';
 import type { Snapshot } from './types.js';
 
+export class EnforcementRejection extends Error {
+  readonly definitive = true;
+}
+
 export class ProxyClient {
   constructor(
     readonly origin: string,
@@ -19,7 +23,7 @@ export class ProxyClient {
       signal: AbortSignal.timeout(5000),
     });
     const data = await boundedJson(response);
-    if (!response.ok) throw new Error(`Proxy refused the operation (HTTP ${response.status})`);
+    if (!response.ok) throw new EnforcementRejection(`Proxy refused the operation (HTTP ${response.status})`);
     return data;
   }
   async snapshot(): Promise<Snapshot> {

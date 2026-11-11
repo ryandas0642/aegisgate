@@ -133,13 +133,14 @@ export class Broker {
         this.store.putProposal(proposal);
         this.store.audit('action.applied', { id, result: proposal.execution });
       });
-    } catch {
+    } catch (error) {
       // A lost response does not establish whether the proxy applied the action.
-      proposal.status = 'uncertain';
+      const refused = !!error && typeof error === 'object' && 'definitive' in error;
+      proposal.status = refused ? 'failed' : 'uncertain';
       this.store.putProposal(proposal);
-      this.store.audit('action.uncertain', {
+      this.store.audit(refused ? 'action.refused' : 'action.uncertain', {
         id,
-        note: 'Reconcile against the proxy action ledger before any retry.',
+        note: refused ? 'The enforcement endpoint rejected this action.' : 'Reconcile against the proxy action ledger before any retry.',
       });
     }
     return proposal;
