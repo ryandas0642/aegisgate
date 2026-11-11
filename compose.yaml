@@ -1,0 +1,76 @@
+name: aegisgate
+services:
+  proxy:
+    build: { context: ., target: proxy-runtime }
+    environment:
+      AEGIS_PROXY_TOKEN: ${AEGIS_PROXY_TOKEN:?Run npm run setup first}
+    ports: ["127.0.0.1:8180:8180"]
+    networks:
+      edge: { ipv4_address: 172.30.0.2 }
+      operations: { ipv4_address: 172.31.0.2 }
+    depends_on: [backend-a, backend-b]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 12s
+  console:
+    build: { context: ., target: app-runtime }
+    ports: ["127.0.0.1:4174:4174"]
+    environment:
+      AEGIS_BIND: 0.0.0.0
+      AEGIS_PROXY_ORIGIN: http://proxy:9090
+      AEGIS_PROXY_TOKEN: ${AEGIS_PROXY_TOKEN:?Run npm run setup first}
+      AEGIS_AGENT_TOKEN: ${AEGIS_AGENT_TOKEN:?Run npm run setup first}
+      AEGIS_OPERATOR_PASSWORD: ${AEGIS_OPERATOR_PASSWORD:?Run npm run setup first}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4.1-mini}
+    volumes: ["audit:/app/.runtime"]
+    networks: [operations]
+    depends_on: [proxy]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  backend-a:
+    build: { context: ., target: app-runtime }
+    command: [node, build/server/scripts/backend.js]
+    environment: { PORT: "8101", BACKEND_ID: backend-a }
+    networks:
+      operations: { ipv4_address: 172.31.0.10 }
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  backend-b:
+    build: { context: ., target: app-runtime }
+    command: [node, build/server/scripts/backend.js]
+    environment: { PORT: "8102", BACKEND_ID: backend-b }
+    networks:
+      operations: { ipv4_address: 172.31.0.11 }
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  normal:
+    profiles: [demo]
+    build: { context: ., target: app-runtime }
+    command: [node, build/server/scripts/traffic.js, --mode, normal, --source, auto, --origin, "http://proxy:8180/", --count, "1000"]
+    networks:
+      edge: { ipv4_address: 172.30.0.10 }
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  burst:
+    profiles: [demo]
+    build: { context: ., target: app-runtime }
+    command: [node, build/server/scripts/traffic.js, --mode, burst, --source, auto, --origin, "http://proxy:8180/"]
+    networks:
+      edge: { ipv4_address: 172.30.0.11 }
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+networks:
+  edge:
+    ipam: { config: [{ subnet: 172.30.0.0/24 }] }
+  operations:
+    ipam: { config: [{ subnet: 172.31.0.0/24 }] }
+volumes:
+  audit:

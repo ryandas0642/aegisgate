@@ -1,0 +1,11 @@
+.git
+.deps
+.runtime
+.env
+node_modules
+build
+dist
+test-results
+playwright-report
+docs/screenshots
+*.log

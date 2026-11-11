@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createApi } from './api.js';
 import { ProxyClient } from './proxy.js';
 import { settings } from './settings.js';
@@ -13,7 +14,8 @@ app.server.listen(config.port, config.bind, () => {
   console.log(`AegisGate console: http://127.0.0.1:${config.port}`);
   console.log(`Operator password is stored locally in ${resolve(config.directory, 'secrets.json')}`);
   console.log(config.inference.key ? 'Live provider configured.' : 'Model provider unavailable. Deterministic controls and manual operator review remain available.');
-  const worker = spawn(process.execPath, ['--import', 'tsx', 'control/worker.ts'], { cwd: process.cwd(), env: { ...childEnvironment, AEGIS_AGENT_TOKEN: config.agentToken, AEGIS_CONTROL_ORIGIN: `http://127.0.0.1:${config.port}`, OPENROUTER_API_KEY: config.inference.key, OPENROUTER_MODEL: config.inference.model }, stdio: ['ignore', 'inherit', 'inherit'], windowsHide: true });
+  const workerArguments = import.meta.url.endsWith('.ts') ? ['--import', 'tsx', 'control/worker.ts'] : [fileURLToPath(new URL('./worker.js', import.meta.url))];
+  const worker = spawn(process.execPath, workerArguments, { cwd: process.cwd(), env: { ...childEnvironment, AEGIS_AGENT_TOKEN: config.agentToken, AEGIS_CONTROL_ORIGIN: `http://127.0.0.1:${config.port}`, OPENROUTER_API_KEY: config.inference.key, OPENROUTER_MODEL: config.inference.model }, stdio: ['ignore', 'inherit', 'inherit'], windowsHide: true });
   let closing = false;
   const stop = () => { if (closing) return; closing = true; worker.kill(); app.server.close(() => { store.db.close(); process.exit(); }); setTimeout(() => process.exit(), 4000).unref(); };
   process.on('SIGINT', stop); process.on('SIGTERM', stop);

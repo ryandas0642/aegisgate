@@ -1,0 +1,11 @@
+{
+  "listen": "0.0.0.0", "port": 8180,
+  "adminListen": "172.31.0.2", "adminPort": 9090,
+  "healthPath": "/health", "healthIntervalMs": 500, "healthTimeoutMs": 400,
+  "failureThreshold": 2, "recoveryThreshold": 2, "requestTimeoutMs": 3000,
+  "maxConnections": 64, "ratePerSecond": 10, "burst": 20,
+  "violationThreshold": 10, "violationWindowMs": 5000,
+  "allow": [], "deny": [], "eligible": ["172.30.0.11/32"],
+  "protectedSources": ["172.31.0.0/24", "172.30.0.2/32", "172.30.0.10/32"],
+  "backends": [{"id":"backend-a","host":"backend-a","port":8101},{"id":"backend-b","host":"backend-b","port":8102}]
+}
