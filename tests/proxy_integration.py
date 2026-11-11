@@ -34,6 +34,17 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/slow":
             time.sleep(0.8)
+        if self.path == "/large":
+            self.send_response(200)
+            self.send_header("Content-Length", "1048577")
+            self.end_headers()
+            return
+        if self.path == "/chunked":
+            self.send_response(200)
+            self.send_header("Transfer-Encoding", "chunked")
+            self.end_headers()
+            self.wfile.write(b"1\r\nx\r\n0\r\n\r\n")
+            return
         data = json.dumps({"backend": self.server.label, "method": self.command,
                            "body": self.rfile.read(int(self.headers.get("Content-Length", "0"))).decode(),
                            "forwarded": self.headers.get("X-Forwarded-For")}).encode()
@@ -107,6 +118,7 @@ def proxy(**overrides):
     executable = ROOT / "build" / ("aegis-proxy.exe" if os.name == "nt" else "aegis-proxy")
     process = subprocess.Popen([str(executable), str(path)], cwd=ROOT, env=env,
                                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    config["testProcess"] = process
     admin = lambda: json.loads(request(config["adminPort"], headers={"Authorization": "Bearer " + TOKEN})[2])
     state = lambda: json.loads(request(config["adminPort"], path="/v1/state", headers={"Authorization": "Bearer " + TOKEN})[2])
     try:
@@ -127,6 +139,35 @@ def proxy(**overrides):
 
 
 class ProxyTests(unittest.TestCase):
+    def test_connection_cap_and_upstream_response_boundaries(self):
+        with proxy(maxConnections=1, requestTimeoutMs=1000) as (c, state, *_):
+            with socket.create_connection(("127.0.0.1", c["port"]), timeout=2) as held:
+                held.sendall(b"GET / HTTP/1.1\r\n")
+                eventually(state, lambda value: value["metrics"]["connections"] == 1)
+                with socket.create_connection(("127.0.0.1", c["port"]), timeout=2) as excess:
+                    try:
+                        excess.sendall(b"GET / HTTP/1.1\r\nHost: local\r\n\r\n")
+                        self.assertEqual(excess.recv(1024), b"")
+                    except (ConnectionResetError, ConnectionAbortedError):
+                        pass
+            eventually(state, lambda value: value["metrics"]["connections"] == 0)
+            self.assertEqual(request(c["port"], path="/large")[0], 502)
+            eventually(state, lambda value: value["metrics"]["connections"] == 0)
+            self.assertEqual(request(c["port"], path="/chunked")[0], 502)
+
+    @unittest.skipIf(os.name == "nt", "POSIX SIGTERM drain; Windows launcher uses process termination")
+    def test_sigterm_drains_an_existing_request(self):
+        import signal
+        with proxy(requestTimeoutMs=2000) as (c, state, *_):
+            result = []
+            thread = threading.Thread(target=lambda: result.append(request(c["port"], path="/slow")[0]))
+            thread.start()
+            eventually(state, lambda value: value["metrics"]["connections"] == 1)
+            os.kill(c["testProcess"].pid, signal.SIGTERM)
+            thread.join(timeout=4)
+            self.assertEqual(result, [200])
+            self.assertEqual(c["testProcess"].wait(timeout=4), 0)
+
     def test_management_auth_and_versioned_action_scope(self):
         with proxy() as (c, state, *_):
             self.assertEqual(request(c["adminPort"], path="/v1/state")[0], 401)
