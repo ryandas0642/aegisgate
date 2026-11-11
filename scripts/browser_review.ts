@@ -65,30 +65,34 @@ try {
     .getByText(/Current lifetime/)
     .first()
     .waitFor();
-  const choice = await page.waitForFunction(async () => {
-    const state = await (await fetch('/api/state')).json();
-    return (
-      state.incidents.find(
-        (incident: any) =>
-          incident.source === '127.0.0.2' &&
-          Date.now() - Date.parse(incident.createdAt) < 250000 &&
-          incident.eventId.startsWith(state.snapshot.epoch + ':') &&
-          !state.proposals.some(
-            (proposal: any) =>
-              proposal.content.incidentId === incident.id &&
-              [
-                'proposed',
-                'executing',
-                'applied',
-                'verified',
-                'inconclusive',
-                'uncertain',
-              ].includes(proposal.status),
-          ),
-      )?.id || false
-    );
-  });
-  const incidentId = String(await choice.jsonValue());
+  let incidentId = '';
+  for (let attempt = 0; attempt < 80 && !incidentId; attempt++) {
+    incidentId = (await page.evaluate(async () => {
+      const state = await (await fetch('/api/state')).json();
+      return (
+        state.incidents.find(
+          (incident: any) =>
+            incident.source === '127.0.0.2' &&
+            Date.now() - Date.parse(incident.createdAt) < 250000 &&
+            incident.eventId.startsWith(state.snapshot.epoch + ':') &&
+            !state.proposals.some(
+              (proposal: any) =>
+                proposal.content.incidentId === incident.id &&
+                [
+                  'proposed',
+                  'executing',
+                  'applied',
+                  'verified',
+                  'inconclusive',
+                  'uncertain',
+                ].includes(proposal.status),
+            ),
+        )?.id || false
+      );
+    })) as string;
+    if (!incidentId) await page.waitForTimeout(100);
+  }
+  assert.ok(incidentId, 'an eligible current incident must be observed before selecting it');
   await page
     .getByRole('row')
     .filter({ hasText: incidentId.slice(0, 8) })
