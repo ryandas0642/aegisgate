@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "tsx scripts/dev.ts",
     "dev:ui": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && tsx scripts/notices.ts",
     "build:proxy": "python scripts/build_proxy.py",
     "test": "tsx scripts/test.ts",
     "setup": "tsx scripts/setup_env.ts",

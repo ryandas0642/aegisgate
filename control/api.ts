@@ -405,6 +405,7 @@ export function createApi(options: Options) {
         '.svg': 'image/svg+xml',
         '.png': 'image/png',
         '.woff2': 'font/woff2',
+        '.txt': 'text/plain; charset=utf-8',
       };
       if (!types[extname(file)]) return json(response, 404, { error: 'Asset not found' });
       response.writeHead(200, { 'Content-Type': types[extname(file)] });
