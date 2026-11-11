@@ -21,5 +21,12 @@ export class Store {
     const record = { seq: (last?.seq ?? 0) + 1, id: randomUUID(), time: new Date().toISOString(), type, payload: redact(payload), previous: last?.digest ?? '0'.repeat(64) };
     this.db.prepare('INSERT INTO audit VALUES(?,?,?,?,?,?,?)').run(record.seq, record.id, record.time, record.type, JSON.stringify(record.payload), record.previous, hash(record));
   }
+  transaction<T>(operation: () => T): T {
+    this.db.exec('BEGIN IMMEDIATE');
+    try { const result = operation(); this.db.exec('COMMIT'); return result; }
+    catch (error) { this.db.exec('ROLLBACK'); throw error; }
+  }
+  set(key: string, data: unknown): void { this.db.prepare('INSERT INTO meta VALUES(?,?) ON CONFLICT(key) DO UPDATE SET data=excluded.data').run(key, JSON.stringify(data)); }
+  get<T>(key: string): T | undefined { const row = this.db.prepare('SELECT data FROM meta WHERE key=?').get(key) as { data: string } | undefined; return row ? JSON.parse(row.data) as T : undefined; }
   // store methods
 }
