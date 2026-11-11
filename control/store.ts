@@ -145,6 +145,7 @@ export class Store {
           .run(event.id, event.time, event.type, JSON.stringify(event));
         if (!inserted.changes || !event.type.startsWith('detection.')) continue;
         const incident: Incident = {
+          proxyEpoch: snapshot.epoch,
           id: randomUUID(),
           eventId: event.id,
           kind: event.type === 'detection.security' ? 'security' : 'reliability',

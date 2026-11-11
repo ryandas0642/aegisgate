@@ -44,6 +44,7 @@ export type Snapshot = {
   events: Evidence[];
 };
 export type Incident = {
+  proxyEpoch?: string;
   phase?: 'verification';
   verification?: Record<string, unknown>;
   verificationEvidence?: Evidence[];
