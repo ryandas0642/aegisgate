@@ -122,6 +122,23 @@ def proxy(**overrides):
 
 
 class ProxyTests(unittest.TestCase):
+    def test_management_auth_and_versioned_action_scope(self):
+        with proxy() as (c, state, *_):
+            self.assertEqual(request(c["adminPort"], path="/v1/state")[0], 401)
+            self.assertEqual(request(c["adminPort"], path="/v1/state", headers={"Authorization": "Bearer wrong"})[0], 401)
+            snapshot = state()
+            action = {"actionId": "00000000-0000-4000-8000-000000000001", "proposalHash": "a" * 64, "source": "127.0.0.2", "ttlSeconds": 60, "expectedEpoch": snapshot["epoch"], "expectedRevision": snapshot["revision"]}
+            apply = lambda value: request(c["adminPort"], "POST", "/v1/actions/deny", json.dumps(value), {"Authorization": "Bearer " + TOKEN})
+            self.assertEqual(apply({**action, "source": "127.0.0.1"})[0], 409)
+            self.assertEqual(apply({**action, "ttlSeconds": 601})[0], 409)
+            self.assertEqual(apply(action)[0], 200)
+            self.assertEqual(apply(action)[0], 200)
+            self.assertEqual(len(state()["rules"]), 1)
+            self.assertEqual(apply({**action, "source": "127.0.0.3"})[0], 409)
+            self.assertEqual(apply({**action, "actionId": "00000000-0000-4000-8000-000000000002"})[0], 409)
+            self.assertEqual(request(c["port"], source="127.0.0.2")[0], 403)
+            self.assertEqual(request(c["port"])[0], 200)
+
     def test_request_boundaries_and_malformed_framing(self):
         with proxy() as (c, *_):
             self.assertEqual(request(c["port"], "PUT")[0], 405)
