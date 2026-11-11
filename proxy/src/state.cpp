@@ -65,5 +65,16 @@ std::optional<std::size_t> State::selectBackend() {
     }
     return std::nullopt;
 }
+json::object State::snapshot() {
+    expire(); json::array backends,activeRules,log,actions;
+    for(const auto& b:config.backends) backends.push_back({{"id",b.id},{"healthy",b.healthy},{"requests",b.requests},{"failures",b.failures},{"successes",b.successes}});
+    for(const auto& [source,r]:rules) activeRules.push_back({{"source",source},{"actionId",r.actionId},{"expiresAtMs",r.expiresAtMs}});
+    for(const auto& event:events) log.push_back(event);
+    for(const auto& [id,a]:applied) actions.push_back(a.at("result"));
+    return {{"epoch",epoch},{"revision",revision},{"observedAt",utcNow()},{"sequence",sequence},{"oldestSequence",events.empty()?sequence:json::value_to<std::uint64_t>(events.front().at("sequence"))},
+        {"metrics",{{"requests",total},{"forwarded",forwarded},{"denied",denied},{"limited",limited},{"errors",errors},{"connections",connections}}},
+        {"limits",{{"ratePerSecond",config.ratePerSecond},{"burst",config.burst},{"maxConnections",config.maxConnections}}},
+        {"backends",backends},{"rules",activeRules},{"events",log},{"actions",actions}};
+}
 // state methods
 }
