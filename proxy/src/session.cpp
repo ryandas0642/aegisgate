@@ -109,5 +109,27 @@ void Session::forward() {
         });
     });
 }
-// session methods
+void Session::receive() {
+    upstreamParser_.header_limit(16384); upstreamParser_.body_limit(1048576);
+    upstreamParser_.skip(request_.method()==http::verb::head);
+    http::async_read_header(upstream_,output_,upstreamParser_,[self=shared_from_this()](beast::error_code ec,std::size_t){
+        if(self->responding_) return;
+        if(ec) return self->reply(502,"upstream headers rejected");
+        const auto& header=self->upstreamParser_.get();
+        const bool empty=header.result_int()==204||header.result_int()==304||self->request_.method()==http::verb::head;
+        if(header.version()!=11||header.result_int()<200||header.count(http::field::content_length)>1||header.count(http::field::transfer_encoding)||(!empty&&!self->upstreamParser_.content_length())) return self->reply(502,"upstream framing unsupported");
+        const auto complete=[self](beast::error_code error,std::size_t){
+            if(self->responding_) return;
+            if(error) return self->reply(502,"upstream body rejected");
+            self->response_=self->upstreamParser_.release();
+            std::set<std::string> remove={"connection","keep-alive","proxy-authenticate","proxy-authorization","te","trailer","transfer-encoding","upgrade"};
+            std::istringstream tokens(std::string(self->response_[http::field::connection]));std::string field;
+            while(std::getline(tokens,field,',')){field.erase(std::remove_if(field.begin(),field.end(),[](unsigned char c){return std::isspace(c);}),field.end());std::transform(field.begin(),field.end(),field.begin(),[](unsigned char c){return std::tolower(c);});remove.insert(field);}
+            for(const auto& key:remove) self->response_.erase(key);
+            self->response_.set("X-Aegis-Backend",self->state_->config.backends[*self->backend_].id);
+            ++self->state_->forwarded; self->send();
+        };
+        if(self->upstreamParser_.is_done()) complete({},0); else http::async_read(self->upstream_,self->output_,self->upstreamParser_,complete);
+    });
+}
 }
