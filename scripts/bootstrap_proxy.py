@@ -12,7 +12,8 @@ SHA256 = "5e93d582aff26868d581a52ae78c7d8edf3f3064742c6e77901a1f18a437eea9"
 def bootstrap():
     destination = ROOT / ".deps"
     marker = destination / f"boost_{VERSION}" / "boost" / "beast.hpp"
-    if marker.exists():
+    complete = marker.parent.parent / ".aegis-verified"
+    if marker.exists() and complete.exists() and complete.read_text() == SHA256:
         return marker.parent.parent
     destination.mkdir(exist_ok=True)
     archive = destination / f"boost_{VERSION}.tar.gz"
@@ -27,6 +28,7 @@ def bootstrap():
         prefix = f"boost_{VERSION}/boost/"
         members = [m for m in source.getmembers() if m.name.startswith(prefix) or m.name == f"boost_{VERSION}/LICENSE_1_0.txt"]
         source.extractall(destination, members=members, filter="data")
+    complete.write_text(SHA256)
     return marker.parent.parent
 
 
