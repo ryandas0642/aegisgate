@@ -70,5 +70,17 @@ void Session::header() {
         self->request_=self->parser_.release(); self->dispatch();
     });
 }
+void Session::dispatch() {
+    if(input_.size()) return reply(400,"pipelined messages are unsupported");
+    if(!admin_) return forward();
+    try {
+        json::object result;
+        if(request_.method()==http::verb::get&&request_.target()=="/v1/state") result=state_->snapshot();
+        else if(request_.method()==http::verb::post&&request_.target()=="/v1/actions/deny") result=state_->apply(json::parse(request_.body()).as_object());
+        else return reply(404,"administrative route not found");
+        response_={http::status::ok,11}; response_.set(http::field::content_type,"application/json");
+        response_.body()=json::serialize(result); response_.prepare_payload(); send();
+    } catch(const std::exception&) {reply(409,"invalid, stale, or out-of-scope action");}
+}
 // session methods
 }
