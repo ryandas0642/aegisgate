@@ -76,5 +76,28 @@ json::object State::snapshot() {
         {"limits",{{"ratePerSecond",config.ratePerSecond},{"burst",config.burst},{"maxConnections",config.maxConnections}}},
         {"backends",backends},{"rules",activeRules},{"events",log},{"actions",actions}};
 }
-// state methods
+json::object State::apply(const json::object& input) {
+    expire();
+    if(input.size()!=6) throw std::invalid_argument("unexpected action fields");
+    const auto id=std::string(input.at("actionId").as_string()),source=std::string(input.at("source").as_string());
+    const auto hash=std::string(input.at("proposalHash").as_string());
+    const auto ttl=input.at("ttlSeconds").as_int64();
+    if(id.size()!=36||id.find_first_not_of("0123456789abcdef-")!=std::string::npos||hash.size()!=64||hash.find_first_not_of("0123456789abcdef")!=std::string::npos) throw std::invalid_argument("invalid action identity");
+    if(auto it=applied.find(id);it!=applied.end()) {
+        if(it->second.at("input")!=input) throw std::invalid_argument("action ID reused with altered parameters");
+        return it->second.at("result").as_object();
+    }
+    if(input.at("expectedEpoch")!=epoch||json::value_to<std::uint64_t>(input.at("expectedRevision"))!=revision) throw std::invalid_argument("stale configuration version");
+    auto ip=parseIPv4(source);
+    if(formatIPv4(ip)!=source||!config.eligible.match(ip)||config.protectedSources.match(ip)) throw std::invalid_argument("source outside the permitted action scope");
+    for(const auto& b:config.backends) if(b.host==source) throw std::invalid_argument("cannot deny a backend address");
+    if(ttl<60||ttl>600||rules.count(source)||rules.size()>=64||applied.size()>=1024) throw std::invalid_argument("action bounds or capacity exceeded");
+    auto expiry=std::chrono::system_clock::now()+std::chrono::seconds(ttl);
+    auto ms=static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(expiry.time_since_epoch()).count());
+    rules.emplace(source,Rule{id,source,ms,Clock::now()+std::chrono::seconds(ttl)}); ++revision;
+    json::object result={{"actionId",id},{"source",source},{"expiresAtMs",ms},{"epoch",epoch},{"revision",revision},{"status","applied"}};
+    applied.emplace(id,json::object{{"input",input},{"result",result}});
+    emit("rule.applied",{{"source",source},{"actionId",id},{"proposalHash",hash},{"expiresAtMs",ms}});
+    return result;
+}
 }
