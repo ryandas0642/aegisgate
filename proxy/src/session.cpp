@@ -24,7 +24,8 @@ void Session::reply(unsigned status,const std::string& message) {
     response_.body()=json::serialize(json::object{{"error",message}}); response_.prepare_payload(); send();
 }
 void Session::send() {
-    if(responding_) return; responding_=true; deadline_.cancel(); resolver_.cancel();
+    if(responding_) return;
+    responding_=true; deadline_.cancel(); resolver_.cancel();
     response_.keep_alive(false);
     if(!admin_) {
         if(response_.result_int()>=500) ++state_->errors;

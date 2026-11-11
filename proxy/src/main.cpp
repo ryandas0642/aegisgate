@@ -14,14 +14,17 @@ int main(int argc,char** argv) {
         std::function<void()> tick;
         tick=[&]{expiry.expires_after(std::chrono::milliseconds(250));expiry.async_wait([&](auto ec){if(!ec){state->expire();tick();}});};tick();
         aegis::net::signal_set signals(io,SIGINT,SIGTERM);
+        aegis::Clock::time_point drainDeadline;
+        std::function<void()> checkDrain;
+        checkDrain=[&]{
+            if(state->connections==0||aegis::Clock::now()>=drainDeadline){io.stop();return;}
+            drain.expires_after(std::chrono::milliseconds(50));
+            drain.async_wait([&](auto ec){if(!ec)checkDrain();});
+        };
         signals.async_wait([&](auto,int){
             data->stop();admin->stop();state->emit("proxy.draining");
-            auto until=aegis::Clock::now()+std::chrono::seconds(10);
-            auto wait=std::make_shared<std::function<void()>>();
-            *wait=[&,until,wait]{
-                if(state->connections==0||aegis::Clock::now()>=until){*wait={};io.stop();return;}
-                drain.expires_after(std::chrono::milliseconds(50));drain.async_wait([wait](auto ec){if(!ec)(*wait)();});
-            };(*wait)();
+            drainDeadline=aegis::Clock::now()+std::chrono::seconds(10);
+            checkDrain();
         });
         state->emit("proxy.started");
         std::cout<<"AegisGate proxy listening on "<<state->config.listen<<":"<<state->config.port<<std::endl;

@@ -8,7 +8,8 @@ class Probe:public std::enable_shared_from_this<Probe> {
 public:
     Probe(net::io_context& io,std::shared_ptr<State> state,std::size_t index):state_(std::move(state)),index_(index),stream_(io),resolver_(io),deadline_(io),delay_(io) {}
     void finish(bool success) {
-        if(finished_) return; finished_=true; deadline_.cancel();resolver_.cancel();beast::error_code ignored;stream_.socket().close(ignored);
+        if(finished_) return;
+        finished_=true; deadline_.cancel();resolver_.cancel();beast::error_code ignored;stream_.socket().close(ignored);
         auto& b=state_->config.backends[index_];
         if(success) {
             b.failures=0; b.successes=std::min(b.successes+1,state_->config.recoveryThreshold);
@@ -29,11 +30,14 @@ public:
         deadline_.expires_after(std::chrono::milliseconds(state_->config.healthTimeoutMs));
         deadline_.async_wait([self=shared_from_this()](beast::error_code ec){if(!ec)self->finish(false);});
         resolver_.async_resolve(b.host,std::to_string(b.port),[self=shared_from_this()](beast::error_code ec,tcp::resolver::results_type endpoints){
-            if(self->finished_)return; if(ec)return self->finish(false);
+            if(self->finished_)return;
+            if(ec)return self->finish(false);
             self->stream_.async_connect(endpoints,[self](beast::error_code error,const tcp::endpoint&){
-                if(self->finished_)return;if(error)return self->finish(false);
+                if(self->finished_)return;
+                if(error)return self->finish(false);
                 http::async_write(self->stream_,self->request_,[self](beast::error_code e,std::size_t){
-                    if(self->finished_)return;if(e)return self->finish(false);
+                    if(self->finished_)return;
+                    if(e)return self->finish(false);
                     http::async_read(self->stream_,self->buffer_,self->parser_,[self](beast::error_code err,std::size_t){self->finish(!err&&self->parser_.get().result()==http::status::ok);});
                 });
             });
