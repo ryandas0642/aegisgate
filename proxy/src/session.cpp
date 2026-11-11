@@ -90,7 +90,7 @@ void Session::forward() {
     if(!backend_) return reply(503,"no healthy backend");
     auto& backend=state_->config.backends[*backend_];
     std::set<std::string> remove={"connection","keep-alive","proxy-authenticate","proxy-authorization","te","trailer","transfer-encoding","upgrade","forwarded","x-forwarded-for","x-forwarded-host","x-forwarded-proto"};
-    std::istringstream connection(std::string(request_[http::field::connection])); std::string name;
+    std::istringstream connection{std::string(request_[http::field::connection])}; std::string name;
     while(std::getline(connection,name,',')) {name.erase(std::remove_if(name.begin(),name.end(),[](unsigned char c){return std::isspace(c);}),name.end()); std::transform(name.begin(),name.end(),name.begin(),[](unsigned char c){return std::tolower(c);});remove.insert(name);}
     for(const auto& field:remove) request_.erase(field);
     request_.set(http::field::host,backend.host+":"+std::to_string(backend.port));
@@ -126,7 +126,7 @@ void Session::receive() {
             if(error) return self->reply(502,"upstream body rejected");
             self->response_=self->upstreamParser_.release();
             std::set<std::string> remove={"connection","keep-alive","proxy-authenticate","proxy-authorization","te","trailer","transfer-encoding","upgrade"};
-            std::istringstream tokens(std::string(self->response_[http::field::connection]));std::string field;
+            std::istringstream tokens{std::string(self->response_[http::field::connection])};std::string field;
             while(std::getline(tokens,field,',')){field.erase(std::remove_if(field.begin(),field.end(),[](unsigned char c){return std::isspace(c);}),field.end());std::transform(field.begin(),field.end(),field.begin(),[](unsigned char c){return std::tolower(c);});remove.insert(field);}
             for(const auto& key:remove) self->response_.erase(key);
             self->response_.set("X-Aegis-Backend",self->state_->config.backends[*self->backend_].id);

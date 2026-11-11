@@ -87,7 +87,7 @@ json::object State::apply(const json::object& input) {
         if(it->second.at("input")!=input) throw std::invalid_argument("action ID reused with altered parameters");
         return it->second.at("result").as_object();
     }
-    if(input.at("expectedEpoch")!=epoch||json::value_to<std::uint64_t>(input.at("expectedRevision"))!=revision) throw std::invalid_argument("stale configuration version");
+    if(std::string(input.at("expectedEpoch").as_string())!=epoch||json::value_to<std::uint64_t>(input.at("expectedRevision"))!=revision) throw std::invalid_argument("stale configuration version");
     auto ip=parseIPv4(source);
     if(formatIPv4(ip)!=source||!config.eligible.match(ip)||config.protectedSources.match(ip)) throw std::invalid_argument("source outside the permitted action scope");
     for(const auto& b:config.backends) if(b.host==source) throw std::invalid_argument("cannot deny a backend address");
