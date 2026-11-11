@@ -82,5 +82,32 @@ void Session::dispatch() {
         response_.body()=json::serialize(result); response_.prepare_payload(); send();
     } catch(const std::exception&) {reply(409,"invalid, stale, or out-of-scope action");}
 }
+void Session::forward() {
+    backend_=state_->selectBackend();
+    if(!backend_) return reply(503,"no healthy backend");
+    auto& backend=state_->config.backends[*backend_];
+    std::set<std::string> remove={"connection","keep-alive","proxy-authenticate","proxy-authorization","te","trailer","transfer-encoding","upgrade","forwarded","x-forwarded-for","x-forwarded-host","x-forwarded-proto"};
+    std::istringstream connection(std::string(request_[http::field::connection])); std::string name;
+    while(std::getline(connection,name,',')) {name.erase(std::remove_if(name.begin(),name.end(),[](unsigned char c){return std::isspace(c);}),name.end()); std::transform(name.begin(),name.end(),name.begin(),[](unsigned char c){return std::tolower(c);});remove.insert(name);}
+    for(const auto& field:remove) request_.erase(field);
+    request_.set(http::field::host,backend.host+":"+std::to_string(backend.port));
+    request_.set("X-Aegis-Request-Id",state_->epoch+":"+std::to_string(state_->total));
+    request_.keep_alive(false); request_.prepare_payload();
+    deadline_.expires_after(std::chrono::milliseconds(state_->config.requestTimeoutMs));
+    deadline_.async_wait([self=shared_from_this()](beast::error_code ec){if(!ec&&!self->responding_){beast::error_code ignored;self->resolver_.cancel();self->upstream_.socket().close(ignored);self->reply(504,"upstream deadline exceeded");}});
+    resolver_.async_resolve(backend.host,std::to_string(backend.port),[self=shared_from_this()](beast::error_code ec,tcp::resolver::results_type endpoints){
+        if(self->responding_) return;
+        if(ec) return self->reply(502,"backend resolution failed");
+        self->upstream_.async_connect(endpoints,[self](beast::error_code error,const tcp::endpoint&){
+            if(self->responding_) return;
+            if(error) return self->reply(502,"backend connection failed");
+            http::async_write(self->upstream_,self->request_,[self](beast::error_code writeError,std::size_t){
+                if(self->responding_) return;
+                if(writeError) return self->reply(502,"backend write failed");
+                self->receive();
+            });
+        });
+    });
+}
 // session methods
 }
