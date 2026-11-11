@@ -26,7 +26,11 @@ export function App() {
     [demo, setDemo] = useState(false);
   useEffect(() => {
     if (!state) return;
-    setSelected(current => state.incidents.some(incident => incident.id === current) ? current : state.incidents[0]?.id || '');
+    setSelected((current) =>
+      state.incidents.some((incident) => incident.id === current)
+        ? current
+        : state.incidents[0]?.id || '',
+    );
   }, [state]);
   useEffect(() => {
     api('/api/session')
@@ -152,7 +156,7 @@ export function App() {
               className={tab === item.id ? 'nav-item active' : 'nav-item'}
               onClick={() => setTab(item.id)}
               title={item.label}
-                aria-label={item.label}
+              aria-label={item.label}
             >
               <Icon name={item.icon} size={19} />
               <span>{item.label}</span>
@@ -254,7 +258,14 @@ export function App() {
               </button>
             </div>
           )}
-          {state && !online && <div className="notice"><span>Proxy telemetry is offline. Displayed values were last observed at {time(state.connection.receivedAt)}. Approvals require fresh proxy state.</span></div>}
+          {state && !online && (
+            <div className="notice">
+              <span>
+                Proxy telemetry is offline. Displayed values were last observed at{' '}
+                {time(state.connection.receivedAt)}. Approvals require fresh proxy state.
+              </span>
+            </div>
+          )}
           {state && tab === 'overview' && (
             <Overview state={state} navigate={setTab} choose={choose} />
           )}
@@ -282,7 +293,10 @@ export function App() {
                     </thead>
                     <tbody>
                       {state.events
-                        .filter((e) => e.type === 'request.completed' && e.epoch === state.snapshot?.epoch)
+                        .filter(
+                          (e) =>
+                            e.type === 'request.completed' && e.epoch === state.snapshot?.epoch,
+                        )
                         .slice(0, 25)
                         .map((event) => (
                           <tr key={event.id}>

@@ -108,11 +108,55 @@ test('an endless model investigation stops at its turn budget', async (t) => {
   assert.equal(calls, 6);
 });
 
-test('verification reviews can cite supplied outcome evidence and cannot propose another action', async t => {
-  const { store, incident } = seed(); t.after(() => store.db.close());
-  const reviewIncident = { ...incident, phase: 'verification' as const, verificationEvidence: [{ ...detection, id: 'post-action-evidence', status: 403 }] };
-  const assessed = { ...finding, observations: [{ text: 'Actual post-action target request was denied.', evidenceIds: ['post-action-evidence'] }] };
-  const dependencies = { decide: async () => ({ decision: { plan: ['Review the actual outcome.'], requests: [], finding: assessed, proposal: null } as Decision, requestId: 'fixture-review', model: 'test/fixture', usage: null, mode: 'fixture' as const }), tool: async () => ({}), record: async () => {}, propose: async () => { throw new Error('must not execute'); } };
-  assert.equal((await investigate(reviewIncident, detection, dependencies)).finding.observations[0].evidenceIds[0], 'post-action-evidence');
-  await assert.rejects(investigate(reviewIncident, detection, { ...dependencies, decide: async () => ({ ...await dependencies.decide(), decision: { plan: ['Review'], requests: [], finding: assessed, proposal: action() } }) }), /Verification reviews/);
+test('verification reviews can cite supplied outcome evidence and cannot propose another action', async (t) => {
+  const { store, incident } = seed();
+  t.after(() => store.db.close());
+  const reviewIncident = {
+    ...incident,
+    phase: 'verification' as const,
+    verificationEvidence: [{ ...detection, id: 'post-action-evidence', status: 403 }],
+  };
+  const assessed = {
+    ...finding,
+    observations: [
+      {
+        text: 'Actual post-action target request was denied.',
+        evidenceIds: ['post-action-evidence'],
+      },
+    ],
+  };
+  const dependencies = {
+    decide: async () => ({
+      decision: {
+        plan: ['Review the actual outcome.'],
+        requests: [],
+        finding: assessed,
+        proposal: null,
+      } as Decision,
+      requestId: 'fixture-review',
+      model: 'test/fixture',
+      usage: null,
+      mode: 'fixture' as const,
+    }),
+    tool: async () => ({}),
+    record: async () => {},
+    propose: async () => {
+      throw new Error('must not execute');
+    },
+  };
+  assert.equal(
+    (await investigate(reviewIncident, detection, dependencies)).finding.observations[0]
+      .evidenceIds[0],
+    'post-action-evidence',
+  );
+  await assert.rejects(
+    investigate(reviewIncident, detection, {
+      ...dependencies,
+      decide: async () => ({
+        ...(await dependencies.decide()),
+        decision: { plan: ['Review'], requests: [], finding: assessed, proposal: action() },
+      }),
+    }),
+    /Verification reviews/,
+  );
 });

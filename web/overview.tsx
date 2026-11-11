@@ -11,17 +11,14 @@ export function TrafficChart({ state }: { state: ConsoleState }) {
         icon="traffic"
       />
     );
-  const points = samples
-    .slice(1)
-    .map((s, i) => ({
-      at: s.at,
-      requests:
-        Math.max(0, s.requests - samples[i].requests) /
-        Math.max(0.1, (s.at - samples[i].at) / 1000),
-      rejected:
-        Math.max(0, s.denied + s.limited - samples[i].denied - samples[i].limited) /
-        Math.max(0.1, (s.at - samples[i].at) / 1000),
-    }));
+  const points = samples.slice(1).map((s, i) => ({
+    at: s.at,
+    requests:
+      Math.max(0, s.requests - samples[i].requests) / Math.max(0.1, (s.at - samples[i].at) / 1000),
+    rejected:
+      Math.max(0, s.denied + s.limited - samples[i].denied - samples[i].limited) /
+      Math.max(0.1, (s.at - samples[i].at) / 1000),
+  }));
   const max = Math.max(5, Math.ceil(Math.max(...points.map((p) => p.requests)) / 5) * 5);
   const coordinates = (field: 'requests' | 'rejected') =>
     points
@@ -198,7 +195,11 @@ export function IncidentTable({
                       {incident.kind === 'security'
                         ? 'Deterministic security rule'
                         : 'Deterministic health checks'}{' '}
-                      · {incident.eventId.startsWith((state.snapshot?.epoch ?? '') + ':') ? 'Current lifetime' : 'Historical lifetime'} · {short(incident.id, 8)}
+                      ·{' '}
+                      {incident.eventId.startsWith((state.snapshot?.epoch ?? '') + ':')
+                        ? 'Current lifetime'
+                        : 'Historical lifetime'}{' '}
+                      · {short(incident.id, 8)}
                     </small>
                   </span>
                 </div>

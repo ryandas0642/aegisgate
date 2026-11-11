@@ -59,7 +59,12 @@ export class Broker {
       throw new Error('This incident already has an active proposal');
     const snapshot = await this.proxy.snapshot();
     const detection = this.store.evidence(incident.eventId);
-    if (!detection || detection.epoch !== snapshot.epoch || Date.now() - Date.parse(detection.time) > 300000) throw new Error('Incident evidence is historical or stale; obtain a fresh detection');
+    if (
+      !detection ||
+      detection.epoch !== snapshot.epoch ||
+      Date.now() - Date.parse(detection.time) > 300000
+    )
+      throw new Error('Incident evidence is historical or stale; obtain a fresh detection');
     const content = {
       ...structuredClone(input),
       incidentId,

@@ -23,7 +23,8 @@ export function IncidentSelect({
         {state.incidents.map((i) => (
           <option key={i.id} value={i.id}>
             {i.kind === 'security' ? 'Source violations' : 'Backend health'} ·{' '}
-            {i.source || i.backend} · {time(i.createdAt)} · {i.eventId.startsWith((state.snapshot?.epoch ?? '') + ':') ? 'Current' : 'Historical'}
+            {i.source || i.backend} · {time(i.createdAt)} ·{' '}
+            {i.eventId.startsWith((state.snapshot?.epoch ?? '') + ':') ? 'Current' : 'Historical'}
           </option>
         ))}
       </select>

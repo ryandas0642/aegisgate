@@ -92,22 +92,71 @@ test('lost acknowledgements reconcile without repeating a state change', async (
   assert.equal(store.proposal(p.id)?.status, 'interrupted');
 });
 
-test('stale proposals release their incident and old detections cannot authorize fresh changes', async t => {
-  const { store, incident } = seed(); t.after(() => store.db.close());
-  const proxy = new FakeProxy(), broker = new Broker(store, proxy);
+test('stale proposals release their incident and old detections cannot authorize fresh changes', async (t) => {
+  const { store, incident } = seed();
+  t.after(() => store.db.close());
+  const proxy = new FakeProxy(),
+    broker = new Broker(store, proxy);
   const proposal = await broker.propose(incident.id, action(), 'fixture');
-  proposal.approvalDeadline = Date.now() - 1; store.putProposal(proposal); broker.reconcile(proxy.state);
+  proposal.approvalDeadline = Date.now() - 1;
+  store.putProposal(proposal);
+  broker.reconcile(proxy.state);
   assert.equal(store.proposal(proposal.id)?.status, 'stale');
   assert.notEqual(store.incident(incident.id)?.status, 'awaiting_approval');
-  const history = new Store(); t.after(() => history.db.close()); const old = snapshot(); old.events[0].time = new Date(Date.now() - 301000).toISOString(); history.ingest(old);
-  await assert.rejects(new Broker(history, proxy).propose(history.incidents()[0].id, action(), 'fixture'), /historical or stale/);
+  const history = new Store();
+  t.after(() => history.db.close());
+  const old = snapshot();
+  old.events[0].time = new Date(Date.now() - 301000).toISOString();
+  history.ingest(old);
+  await assert.rejects(
+    new Broker(history, proxy).propose(history.incidents()[0].id, action(), 'fixture'),
+    /historical or stale/,
+  );
 });
 
-test('a verified result survives movement out of the recent-event window', async t => {
-  const { store, incident } = seed(); t.after(() => store.db.close()); const proxy = new FakeProxy(), broker = new Broker(store, proxy);
-  const p = await broker.propose(incident.id, action(), 'fixture'); await broker.approve(p.id, p.hash, 'local-operator');
-  proxy.state.events.push({ id: 'target-3', sequence: 3, epoch: proxy.state.epoch, time: new Date().toISOString(), type: 'request.completed', source: p.content.source, status: 403 }, { id: 'control-4', sequence: 4, epoch: proxy.state.epoch, time: new Date().toISOString(), type: 'request.completed', source: '127.0.0.1', status: 200 }); proxy.state.sequence = 4;
-  store.ingest(proxy.state); broker.reconcile(proxy.state); assert.equal(store.proposal(p.id)?.status, 'verified');
-  for (let i = 5; i < 510; i++) proxy.state.events.push({ id: 'later-' + i, sequence: i, epoch: proxy.state.epoch, time: new Date().toISOString(), type: 'request.completed', source: '127.0.0.1', status: 200 }); proxy.state.sequence = 509;
-  store.ingest(proxy.state); broker.reconcile(proxy.state); assert.equal(store.proposal(p.id)?.status, 'verified');
+test('a verified result survives movement out of the recent-event window', async (t) => {
+  const { store, incident } = seed();
+  t.after(() => store.db.close());
+  const proxy = new FakeProxy(),
+    broker = new Broker(store, proxy);
+  const p = await broker.propose(incident.id, action(), 'fixture');
+  await broker.approve(p.id, p.hash, 'local-operator');
+  proxy.state.events.push(
+    {
+      id: 'target-3',
+      sequence: 3,
+      epoch: proxy.state.epoch,
+      time: new Date().toISOString(),
+      type: 'request.completed',
+      source: p.content.source,
+      status: 403,
+    },
+    {
+      id: 'control-4',
+      sequence: 4,
+      epoch: proxy.state.epoch,
+      time: new Date().toISOString(),
+      type: 'request.completed',
+      source: '127.0.0.1',
+      status: 200,
+    },
+  );
+  proxy.state.sequence = 4;
+  store.ingest(proxy.state);
+  broker.reconcile(proxy.state);
+  assert.equal(store.proposal(p.id)?.status, 'verified');
+  for (let i = 5; i < 510; i++)
+    proxy.state.events.push({
+      id: 'later-' + i,
+      sequence: i,
+      epoch: proxy.state.epoch,
+      time: new Date().toISOString(),
+      type: 'request.completed',
+      source: '127.0.0.1',
+      status: 200,
+    });
+  proxy.state.sequence = 509;
+  store.ingest(proxy.state);
+  broker.reconcile(proxy.state);
+  assert.equal(store.proposal(p.id)?.status, 'verified');
 });

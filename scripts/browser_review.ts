@@ -41,25 +41,73 @@ try {
   await page.evaluate(async () => {
     const session = await (await fetch('/api/session')).json();
     const state = await (await fetch('/api/state')).json();
-    for (const proposal of state.proposals) if (proposal.status === 'proposed' && proposal.content.rationale.startsWith('Browser acceptance proposal')) await fetch(`/api/proposals/${proposal.id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': session.csrf }, body: JSON.stringify({ hash: proposal.hash }) });
+    for (const proposal of state.proposals)
+      if (
+        proposal.status === 'proposed' &&
+        proposal.content.rationale.startsWith('Browser acceptance proposal')
+      )
+        await fetch(`/api/proposals/${proposal.id}/reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': session.csrf },
+          body: JSON.stringify({ hash: proposal.hash }),
+        });
   });
-  const beforeRequests = await page.evaluate(async () => (await (await fetch('/api/state')).json()).snapshot.metrics.requests as number);
+  const beforeRequests = await page.evaluate(
+    async () => (await (await fetch('/api/state')).json()).snapshot.metrics.requests as number,
+  );
   for (let i = 0; i < 6; i++) assert.equal(await synthetic('127.0.0.1'), 200);
   const codes = [];
   for (let i = 0; i < 60; i++) codes.push(await synthetic('127.0.0.2'));
   assert.ok(codes.includes(429), 'controlled burst must actually hit the proxy rate limit');
   await page.getByRole('button', { name: 'Incidents', exact: true }).click();
   await page.getByText('Source violation threshold', { exact: true }).first().waitFor();
-  await page.getByText(/Current lifetime/).first().waitFor();
+  await page
+    .getByText(/Current lifetime/)
+    .first()
+    .waitFor();
   const choice = await page.waitForFunction(async () => {
     const state = await (await fetch('/api/state')).json();
-    return state.incidents.find((incident: any) => incident.source === '127.0.0.2' && Date.now() - Date.parse(incident.createdAt) < 250000 && incident.eventId.startsWith(state.snapshot.epoch + ':') && !state.proposals.some((proposal: any) => proposal.content.incidentId === incident.id && ['proposed','executing','applied','verified','inconclusive','uncertain'].includes(proposal.status)))?.id || false;
+    return (
+      state.incidents.find(
+        (incident: any) =>
+          incident.source === '127.0.0.2' &&
+          Date.now() - Date.parse(incident.createdAt) < 250000 &&
+          incident.eventId.startsWith(state.snapshot.epoch + ':') &&
+          !state.proposals.some(
+            (proposal: any) =>
+              proposal.content.incidentId === incident.id &&
+              [
+                'proposed',
+                'executing',
+                'applied',
+                'verified',
+                'inconclusive',
+                'uncertain',
+              ].includes(proposal.status),
+          ),
+      )?.id || false
+    );
   });
   const incidentId = String(await choice.jsonValue());
-  await page.getByRole('row').filter({ hasText: incidentId.slice(0, 8) }).click();
+  await page
+    .getByRole('row')
+    .filter({ hasText: incidentId.slice(0, 8) })
+    .click();
   await page.getByRole('button', { name: 'Overview', exact: true }).click();
-  await page.waitForFunction(minimum => Number(document.querySelector('.metric-grid .metric-note')?.textContent?.match(/[\d,]+/)?.[0].replaceAll(',', '') || 0) >= minimum, beforeRequests + 66);
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'desktop document must not overflow horizontally');
+  await page.waitForFunction(
+    (minimum) =>
+      Number(
+        document
+          .querySelector('.metric-grid .metric-note')
+          ?.textContent?.match(/[\d,]+/)?.[0]
+          .replaceAll(',', '') || 0,
+      ) >= minimum,
+    beforeRequests + 66,
+  );
+  assert.ok(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+    'desktop document must not overflow horizontally',
+  );
   await page.screenshot({ path: resolve(output, 'overview.png'), fullPage: true });
   for (const label of ['Traffic & health', 'Investigation', 'Response center', 'Audit trail']) {
     await page.getByRole('button', { name: label, exact: true }).click();
@@ -72,12 +120,17 @@ try {
   if (await page.getByRole('button', { name: 'Create manual proposal', exact: true }).count()) {
     await page.getByRole('button', { name: 'Create manual proposal', exact: true }).click();
     await page.getByRole('dialog').waitFor();
-    await page.getByLabel('Evidence-based rationale').fill('Browser acceptance proposal supported by actual synthetic source violations. This is a manual test proposal, not a model finding.');
+    await page
+      .getByLabel('Evidence-based rationale')
+      .fill(
+        'Browser acceptance proposal supported by actual synthetic source violations. This is a manual test proposal, not a model finding.',
+      );
     await page.getByRole('button', { name: 'Create reviewable proposal', exact: true }).click();
     await page.getByRole('button', { name: 'Review & approve', exact: true }).click();
     const approve = page.getByRole('button', { name: 'Approve temporary deny', exact: true });
     assert.ok(await approve.isDisabled());
-    await page.getByRole('checkbox').check(); assert.ok(await approve.isEnabled());
+    await page.getByRole('checkbox').check();
+    assert.ok(await approve.isEnabled());
     await page.screenshot({ path: resolve(output, 'approval-review.png'), fullPage: true });
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     await page.screenshot({ path: resolve(output, 'response-center.png'), fullPage: true });
@@ -113,7 +166,12 @@ try {
   );
 } catch (error) {
   await page.screenshot({ path: resolve(output, 'failure.png'), fullPage: true });
-  console.error(JSON.stringify({ visibleErrors: await page.locator('[role="alert"], .error').allTextContents(), dialogs: await page.getByRole('dialog').count() }));
+  console.error(
+    JSON.stringify({
+      visibleErrors: await page.locator('[role="alert"], .error').allTextContents(),
+      dialogs: await page.getByRole('dialog').count(),
+    }),
+  );
   throw error;
 } finally {
   await browser.close();
