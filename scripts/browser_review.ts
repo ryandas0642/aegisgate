@@ -53,7 +53,7 @@ try {
   await page.getByText(/Current lifetime/).first().waitFor();
   const choice = await page.waitForFunction(async () => {
     const state = await (await fetch('/api/state')).json();
-    return state.incidents.find((incident: any) => incident.source === '127.0.0.2' && incident.eventId.startsWith(state.snapshot.epoch + ':') && !state.proposals.some((proposal: any) => proposal.content.incidentId === incident.id && ['proposed','executing','applied','verified','inconclusive','uncertain'].includes(proposal.status)))?.id || false;
+    return state.incidents.find((incident: any) => incident.source === '127.0.0.2' && Date.now() - Date.parse(incident.createdAt) < 250000 && incident.eventId.startsWith(state.snapshot.epoch + ':') && !state.proposals.some((proposal: any) => proposal.content.incidentId === incident.id && ['proposed','executing','applied','verified','inconclusive','uncertain'].includes(proposal.status)))?.id || false;
   });
   const incidentId = String(await choice.jsonValue());
   await page.getByRole('row').filter({ hasText: incidentId.slice(0, 8) }).click();

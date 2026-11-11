@@ -1,3 +1,6 @@
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include "aegis/ip.hpp"
 #include <cassert>
 #include <iostream>
