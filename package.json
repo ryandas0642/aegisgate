@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.14.0" },
+  "engines": {
+    "node": ">=22.14.0"
+  },
   "scripts": {
     "dev": "tsx scripts/dev.ts",
     "dev:ui": "vite --host 127.0.0.1",
@@ -15,6 +17,20 @@
     "start": "tsx control/server.ts",
     "demo:traffic": "tsx scripts/traffic.ts"
   },
-  "dependencies": { "ajv": "8.17.1", "react": "19.1.1", "react-dom": "19.1.1" },
-  "devDependencies": { "@types/node": "22.14.0", "@types/react": "19.1.13", "@types/react-dom": "19.1.9", "@vitejs/plugin-react": "4.7.0", "tsx": "4.20.5", "typescript": "5.9.2", "vite": "6.3.6", "@playwright/test": "1.55.1" }
+  "dependencies": {
+    "ajv": "8.17.1",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.1",
+    "@types/node": "22.14.0",
+    "@types/react": "19.1.13",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "4.7.0",
+    "prettier": "^3.6.2",
+    "tsx": "4.20.5",
+    "typescript": "5.9.2",
+    "vite": "6.3.6"
+  }
 }
