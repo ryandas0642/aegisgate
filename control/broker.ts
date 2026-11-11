@@ -52,5 +52,33 @@ export class Broker {
     this.store.transaction(() => { this.store.putProposal(proposal); this.store.audit('human.rejected', { id, proposalHash: expectedHash, actor: 'local-operator' }); });
     return proposal;
   }
-  // broker methods
+  reconcile(snapshot: Snapshot): void {
+    for (const proposal of this.store.proposals()) {
+      if (!['executing', 'uncertain', 'applied', 'verified', 'inconclusive'].includes(proposal.status)) continue;
+      const previous = proposal.status;
+      if (snapshot.epoch !== proposal.content.expectedEpoch) {
+        proposal.status = 'interrupted'; proposal.verification = { outcome: 'interrupted', reason: 'Proxy restarted; previous temporary controls are gone. A new approval is required.' };
+      } else {
+        const action = snapshot.actions.find(item => item.actionId === proposal.id);
+        if (!action) continue;
+        proposal.execution = action;
+        const event = this.store.events(500).find(e => e.type === 'rule.applied' && e.actionId === proposal.id);
+        const after = event ? this.store.events(500).filter(e => e.epoch === snapshot.epoch && e.sequence > event.sequence && e.type === 'request.completed') : [];
+        const denied = after.find(e => e.source === proposal.content.source && e.status === 403);
+        const control = after.find(e => e.source !== proposal.content.source && Number(e.status) >= 200 && Number(e.status) < 400);
+        const installed = snapshot.rules.some(rule => rule.actionId === proposal.id && rule.source === proposal.content.source);
+        if (Date.now() >= action.expiresAtMs && !installed) {
+          proposal.status = 'expired'; proposal.verification = { ...proposal.verification, expiryObserved: true, expiryObservedAt: snapshot.observedAt };
+        } else if (installed) {
+          proposal.status = denied && control ? 'verified' : 'inconclusive';
+          proposal.verification = { outcome: proposal.status, ruleInstalled: true, deniedEvidence: denied?.id ?? null, controlTrafficEvidence: control?.id ?? null, observedAt: snapshot.observedAt, note: denied && control ? 'Target denied; a different client still reached a backend.' : 'Rule installed; both target and control observations are needed.' };
+        }
+      }
+      this.store.putProposal(proposal);
+      if (proposal.status !== previous) {
+        this.store.audit('action.verification', { id: proposal.id, status: proposal.status, verification: proposal.verification });
+        if (['verified', 'inconclusive'].includes(proposal.status)) this.store.set('review:' + proposal.id, { status: 'pending', incidentId: proposal.content.incidentId });
+      }
+    }
+  }
 }
