@@ -28,5 +28,5 @@ process.stdin.on('data', chunk => {
   }
 });
 let closing = false;
-const stop = () => { if (closing) return; closing = true; for (const child of children.values()) child.kill(); setTimeout(() => process.exit(), 1500); };
+const stop = () => { if (closing) return; closing = true; for (const child of children.values()) { if (process.platform === 'win32' && child.pid) spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' }); else child.kill(); } setTimeout(() => process.exit(), 1500); };
 process.on('SIGINT', stop); process.on('SIGTERM', stop);
