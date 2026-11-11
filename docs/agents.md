@@ -8,6 +8,8 @@ Run `npm run setup`, then set `OPENROUTER_API_KEY` in the ignored `.env`. `OPENR
 
 The adapter calls the fixed OpenRouter HTTPS endpoint, rejects redirects, caps response bytes, records public request/model identifiers and usage, and locally validates every decision with AJV. A missing key, refused request, malformed decision, missing response identity, truncation, timeout, unauthorized tool, or invented citation stops the investigation. Private reasoning fields are never persisted.
 
+For portability, the transmitted schema uses a conservative provider subset; string-length and evidence-ID uniqueness constraints remain in the full local validator. Transport structure follows [OpenRouter's structured-output contract](https://openrouter.ai/docs/guides/features/structured-outputs), with the selected provider's [supported-schema subset](https://developers.openai.com/api/docs/guides/structured-outputs#supported-schemas) considered separately from local validation. Documentation compatibility checks do not replace a live provider acceptance run.
+
 An investigation has at most six decision turns, twelve tool requests, eight HTTP inference attempts, a 20-second per-attempt deadline, and an overall bounded job lifetime. Transient HTTP errors receive at most one retry per decision. These are execution limits, not a dollar budget; configure provider-side spending controls separately.
 
 ## Bounded tools

@@ -31,6 +31,8 @@ test('provider transmits strict output schema and records only public response f
     assert.equal(init.headers.Authorization, 'Bearer ' + key);
     const body = JSON.parse(init.body);
     assert.equal(body.response_format.json_schema.strict, true);
+    const schema = JSON.stringify(body.response_format.json_schema.schema);
+    assert.ok(!schema.includes('uniqueItems') && !schema.includes('minLength') && !schema.includes('maxLength'));
     return new Response(JSON.stringify(reply()), { status: 200 });
   }) as typeof fetch);
   const result = await provider.decide({}, new Set(['event-1']), async (type, value) => {

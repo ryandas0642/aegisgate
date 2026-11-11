@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { parseEnv } from 'node:util';
 import { boundedJson } from './http.js';
 import { redact } from './redact.js';
-import { decisionSchema, validateDecision } from './decision.js';
+import { providerDecisionSchema, validateDecision } from './decision.js';
 import type { ModelReply } from './types.js';
 
 export const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
@@ -52,7 +52,7 @@ export class Provider {
       provider: { require_parameters: true },
       response_format: {
         type: 'json_schema',
-        json_schema: { name: 'investigation_decision', strict: true, schema: decisionSchema },
+        json_schema: { name: 'investigation_decision', strict: true, schema: providerDecisionSchema },
       },
     };
     for (let attempt = 0; attempt < 2; attempt++) {
