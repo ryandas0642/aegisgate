@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { createApi } from '../control/api.js';
 import { seed, action, FakeProxy } from './fixtures.js';
+import { Demo } from '../control/demo.js';
 
 test('operator and worker credentials stay separate; Host, Origin, and CSRF protect approvals', async (t) => {
   const { store, incident } = seed(),
@@ -10,6 +11,7 @@ test('operator and worker credentials stay separate; Host, Origin, and CSRF prot
     password = 'x',
     agentToken = 'synthetic-agent-token-longer-than-32-characters';
   const app = createApi({
+    demo: new Demo(async () => {}),
     store,
     proxy,
     password,
@@ -30,6 +32,7 @@ test('operator and worker credentials stay separate; Host, Origin, and CSRF prot
       body: JSON.stringify(body),
     });
   assert.equal((await fetch(origin + '/api/state')).status, 401);
+  assert.equal((await post('/api/demo', { action: 'stop-a' }, { Authorization: 'Bearer ' + agentToken })).status, 401);
   assert.equal((await post('/api/login', { password: 'wrong' })).status, 409);
   assert.equal(
     (await post('/api/login', { password }, { Origin: 'https://attacker.invalid' })).status,
@@ -39,6 +42,9 @@ test('operator and worker credentials stay separate; Host, Origin, and CSRF prot
     cookie = login.headers.get('set-cookie')!.split(';')[0],
     session = (await login.json()) as { csrf: string };
   const p = await app.broker.propose(incident.id, action(), 'fixture');
+  assert.equal((await post('/api/demo', {action:'stop-a'}, {Cookie:cookie})).status,401);
+  assert.equal((await post('/api/demo', {action:'shell'}, {Cookie:cookie,'X-CSRF-Token':session.csrf})).status,409);
+  assert.equal((await post('/api/demo', {action:'stop-a'}, {Cookie:cookie,'X-CSRF-Token':session.csrf})).status,200);
   assert.equal(
     (
       await post(

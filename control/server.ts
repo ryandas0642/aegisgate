@@ -8,12 +8,27 @@ import { Store } from './store.js';
 import { Demo } from './demo.js';
 import { randomUUID } from 'node:crypto';
 
-const demo = process.connected && process.env.AEGIS_DEMO_ENABLED === '1' ? new Demo(action => new Promise((resolve, reject) => {
-  const id = randomUUID();
-  const timer = setTimeout(() => { process.off('message', reply); reject(new Error('Demo launcher did not respond')); }, 5000);
-  const reply = (message: any) => { if (message?.id !== id) return; clearTimeout(timer); process.off('message', reply); message.ok ? resolve() : reject(new Error('Backend operation failed')); };
-  process.on('message', reply); process.send?.({ type: 'demo.backend', id, action });
-})) : undefined;
+const demo =
+  process.connected && process.env.AEGIS_DEMO_ENABLED === '1'
+    ? new Demo(
+        (action) =>
+          new Promise((resolve, reject) => {
+            const id = randomUUID();
+            const timer = setTimeout(() => {
+              process.off('message', reply);
+              reject(new Error('Demo launcher did not respond'));
+            }, 5000);
+            const reply = (message: any) => {
+              if (message?.id !== id) return;
+              clearTimeout(timer);
+              process.off('message', reply);
+              message.ok ? resolve() : reject(new Error('Backend operation failed'));
+            };
+            process.on('message', reply);
+            process.send?.({ type: 'demo.backend', id, action });
+          }),
+      )
+    : undefined;
 
 const config = settings(),
   store = new Store(resolve(config.directory, 'aegis.sqlite'));

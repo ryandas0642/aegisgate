@@ -323,12 +323,21 @@ export function createApi(options: Options) {
         }
         if (request.method === 'GET' && url.pathname === '/api/session')
           return json(response, 200, { csrf: session.csrf });
-        if (request.method === 'GET' && url.pathname === '/api/demo') return json(response, 200, options.demo?.state() ?? { enabled: false });
+        if (request.method === 'GET' && url.pathname === '/api/demo')
+          return json(response, 200, options.demo?.state() ?? { enabled: false });
         if (request.method === 'POST' && url.pathname === '/api/demo') {
-          if (!options.demo) return json(response, 409, { error: 'Start with npm run demo to enable local demo controls.' });
+          if (!options.demo)
+            return json(response, 409, {
+              error: 'Start with npm run demo to enable local demo controls.',
+            });
           const input = await body(request);
-          if (Object.keys(input).length !== 1 || !demoActions.includes(input.action)) throw new Error('Unknown demo action');
-          store.audit('demo.requested', { action: input.action, synthetic: true, actor: 'local-operator' });
+          if (Object.keys(input).length !== 1 || !demoActions.includes(input.action))
+            throw new Error('Unknown demo action');
+          store.audit('demo.requested', {
+            action: input.action,
+            synthetic: true,
+            actor: 'local-operator',
+          });
           const result = await options.demo.run(input.action as DemoAction);
           store.audit('demo.completed', { action: input.action, synthetic: true, result });
           return json(response, 200, result);
