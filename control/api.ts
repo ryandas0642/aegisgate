@@ -98,5 +98,52 @@ export function createApi(options: Options) {
     }
     return json(response, 404, { error: 'Unknown investigator route' });
   };
-  // api setup
+  const server = http.createServer(async (request, response) => {
+    response.setHeader('Cache-Control', 'no-store'); response.setHeader('X-Content-Type-Options', 'nosniff'); response.setHeader('X-Frame-Options', 'DENY');
+    response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    try {
+      const port = (server.address() as { port: number }).port;
+      const origins = [`http://127.0.0.1:${port}`, `http://localhost:${port}`, ...(options.devOrigin ? [options.devOrigin] : [])];
+      if (![ `127.0.0.1:${port}`, `localhost:${port}` ].includes(request.headers.host ?? '') || (request.headers.origin && !origins.includes(request.headers.origin))) return json(response, 403, { error: 'Untrusted Host or Origin' });
+      const url = new URL(request.url ?? '/', `http://${request.headers.host}`);
+      if (url.pathname.startsWith('/internal/')) return await internal(request, response, url.pathname);
+      if (request.method === 'GET' && url.pathname === '/health') return json(response, 200, { service: 'AegisGate', status: 'running' });
+      if (request.method === 'POST' && !origins.includes(request.headers.origin ?? '')) return json(response, 403, { error: 'Same-origin operator request required' });
+      if (request.method === 'POST' && url.pathname === '/api/login') {
+        const input = await body(request), session = auth.login(input.password, request.socket.remoteAddress ?? 'local');
+        response.setHeader('Set-Cookie', `aegis_session=${session.id}; HttpOnly; SameSite=Strict; Path=/; Max-Age=3600`);
+        store.audit('operator.signed_in', { actor: 'local-operator' }); return json(response, 200, { csrf: session.csrf });
+      }
+      if (url.pathname.startsWith('/api/')) {
+        let session; try { session = auth.session(request, request.method !== 'GET'); } catch { return json(response, 401, { error: 'Operator sign-in or CSRF token required' }); }
+        if (request.method === 'GET' && url.pathname === '/api/session') return json(response, 200, { csrf: session.csrf });
+        if (request.method === 'GET' && url.pathname === '/api/state') return json(response, 200, { snapshot: store.get('snapshot') ?? null, connection: store.get('connection') ?? { online: false }, incidents: store.incidents(), proposals: store.proposals(), events: store.events(100), audit: store.auditRecords(100), auditIntegrity: store.verifyAudit(), samples, provider: { name: 'OpenRouter', model: options.model, configured: options.providerConfigured, mode: 'live' } });
+        if (request.method === 'POST' && url.pathname === '/api/logout') { auth.logout(request); response.setHeader('Set-Cookie', 'aegis_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'); return json(response, 200, { signedOut: true }); }
+        const match = url.pathname.match(/^\/api\/proposals\/([0-9a-f-]{36})\/(approve|reject)$/);
+        if (request.method === 'POST' && match) {
+          const input = await body(request); if (Object.keys(input).length !== 1 || typeof input.hash !== 'string') throw new Error('Review the exact current proposal');
+          return json(response, 200, match[2] === 'approve' ? await broker.approve(match[1], input.hash, 'local-operator') : broker.reject(match[1], input.hash));
+        }
+        const incidentRoute = url.pathname.match(/^\/api\/incidents\/([0-9a-f-]{36})\/(investigate|propose)$/);
+        if (request.method === 'POST' && incidentRoute) {
+          const incident = store.incident(incidentRoute[1]); if (!incident) throw new Error('Incident not found');
+          const input = await body(request);
+          if (incidentRoute[2] === 'propose') return json(response, 200, await broker.propose(incident.id, input as any, 'manual'));
+          if (Object.keys(input).length || ['investigating', 'awaiting_approval'].includes(incident.status)) throw new Error('Investigation already running or awaiting a decision');
+          incident.status = 'detected'; store.putIncident(incident); store.audit('investigation.requeued', { incidentId: incident.id, actor: 'local-operator' }); return json(response, 200, incident);
+        }
+        return json(response, 404, { error: 'Operator route not found' });
+      }
+      if (request.method !== 'GET' && request.method !== 'HEAD') return json(response, 405, { error: 'Method not allowed' });
+      const pathname = decodeURIComponent(url.pathname), file = resolve(staticRoot, pathname === '/' ? 'index.html' : '.' + pathname);
+      if (!file.startsWith(staticRoot + sep) || !existsSync(file)) return json(response, 404, { error: 'Asset not found; run npm run build' });
+      const types: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
+      if (!types[extname(file)]) return json(response, 404, { error: 'Asset not found' });
+      response.writeHead(200, { 'Content-Type': types[extname(file)] }); response.end(request.method === 'HEAD' ? undefined : readFileSync(file));
+    } catch (error) { json(response, 409, { error: String((error as Error).message).slice(0, 500) }); }
+  });
+  server.requestTimeout = 10000; server.headersTimeout = 5000; server.maxHeadersCount = 40;
+  const timer = setInterval(() => void poll(), 500); timer.unref();
+  server.on('close', () => clearInterval(timer));
+  return { server, broker, poll };
 }
