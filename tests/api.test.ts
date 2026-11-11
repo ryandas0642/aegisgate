@@ -7,7 +7,7 @@ import { seed, action, FakeProxy } from './fixtures.js';
 test('operator and worker credentials stay separate; Host, Origin, and CSRF protect approvals', async (t) => {
   const { store, incident } = seed(),
     proxy = new FakeProxy(),
-    password = 'synthetic-operator-password',
+    password = 'x',
     agentToken = 'synthetic-agent-token-longer-than-32-characters';
   const app = createApi({
     store,
@@ -30,6 +30,7 @@ test('operator and worker credentials stay separate; Host, Origin, and CSRF prot
       body: JSON.stringify(body),
     });
   assert.equal((await fetch(origin + '/api/state')).status, 401);
+  assert.equal((await post('/api/login', { password: 'wrong' })).status, 409);
   assert.equal(
     (await post('/api/login', { password }, { Origin: 'https://attacker.invalid' })).status,
     403,

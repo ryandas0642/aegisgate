@@ -5,10 +5,7 @@ import { equalSecret } from './security.js';
 export class Auth {
   private sessions = new Map<string, { csrf: string; expires: number }>();
   private attempts = new Map<string, { count: number; since: number }>();
-  constructor(private password: string) {
-    if (password.length < 16)
-      throw new Error('AEGIS_OPERATOR_PASSWORD must contain at least 16 characters');
-  }
+  constructor(private password: string) {}
   login(password: unknown, peer: string) {
     const now = Date.now();
     const attempt = this.attempts.get(peer);

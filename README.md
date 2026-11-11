@@ -39,7 +39,7 @@ npm run dev
 
 The first C++ build downloads checksum-verified Boost 1.90.0 into ignored `.deps/`; its source archive is about 211 MB. Subsequent builds reuse the extracted headers. If PowerShell execution policy blocks `npm`, use `npm.cmd` for these commands. Set `CXX` to an absolute compiler path if the desired g++ is not first on PATH.
 
-Open **http://127.0.0.1:4174**. Read `AEGIS_OPERATOR_PASSWORD` from the generated, ignored `.env` to sign in. If setup was skipped, credentials are generated in `.runtime/secrets.json`. Credentials are never intentionally printed into model context or audit records.
+Open **http://127.0.0.1:4174**. Read `AEGIS_OPERATOR_PASSWORD` from the generated, ignored `.env` to sign in. Operator passwords have no minimum length; setup still generates a strong random default. If setup was skipped, credentials are generated in `.runtime/secrets.json`. Credentials are never intentionally printed into model context or audit records.
 
 The native launcher starts:
 
