@@ -1,3 +1,15 @@
+.demo-step {
+  padding: 17px 0;
+  border-bottom: 1px solid #243540;
+}
+.demo-step strong {
+  font-size: 14px;
+}
+.demo-step .button,
+.demo-step .text-button {
+  margin-right: 12px;
+  margin-top: 8px;
+}
 :root {
   font-family: 'Segoe UI', Inter, system-ui, sans-serif;
   color: #dce6ec;

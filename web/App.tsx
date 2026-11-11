@@ -6,6 +6,7 @@ import { Panel } from './primitives';
 import { InvestigationView } from './investigation';
 import { ResponseView } from './response';
 import { AuditView } from './audit';
+import { DemoPanel } from './demo';
 
 const navigation = [
   { id: 'overview', label: 'Overview', icon: 'grid' },
@@ -357,46 +358,13 @@ export function App() {
         </main>
       </div>
       {demo && (
-        <div className="modal-backdrop" onClick={() => setDemo(false)}>
-          <section
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="demo-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="modal-close"
-              aria-label="Close demo guide"
-              onClick={() => setDemo(false)}
-            >
-              <Icon name="close" />
-            </button>
-            <span className="eyebrow">CONTROLLED, SYNTHETIC TRAFFIC</span>
-            <h2 id="demo-title">See the full lifecycle.</h2>
-            <p>
-              Keep normal traffic running in one terminal. Send a bounded burst from the designated
-              test client in another.
-            </p>
-            <label>01 / Normal traffic</label>
-            <pre>npm run demo:traffic</pre>
-            <label>02 / Controlled burst</label>
-            <pre>npm run demo:traffic -- --mode burst</pre>
-            <p>
-              Inspect the incident and live investigation. If the model is unavailable, a manual
-              proposal is explicitly labeled. Review and approve, then repeat both clients to
-              collect verification evidence.
-            </p>
-            <label>03 / Backend failover</label>
-            <pre>stop a{String.fromCharCode(10)}start a</pre>
-            <p>
-              Type these in the <code>npm run dev</code> terminal. With containers, use{' '}
-              <code>docker compose stop backend-a</code> and{' '}
-              <code>docker compose start backend-a</code>.
-            </p>
-            <Badge tone="cyan">No requests leave the local demo environment</Badge>
-          </section>
-        </div>
+        <DemoPanel
+          close={() => setDemo(false)}
+          openIncident={(id, response) => {
+            choose(id, response ? 'response' : 'investigation');
+            setDemo(false);
+          }}
+        />
       )}
     </div>
   );
