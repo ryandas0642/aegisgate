@@ -38,7 +38,7 @@ while (!stopping) {
       await setTimeout(750);
       continue;
     }
-    const provider = new Provider(inferenceConfig());
+    const provider = new Provider(inferenceConfig(process.env, ''));
     const record = async (type: string, value: unknown) => {
       await api('/internal/record', { jobId: job.jobId, type, value });
     };
