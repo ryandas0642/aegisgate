@@ -16,5 +16,10 @@ export class Store {
       CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, data TEXT);
       CREATE INDEX IF NOT EXISTS event_type ON events(type);`);
   }
+  audit(type: string, payload: unknown): void {
+    const last = this.db.prepare('SELECT seq, digest FROM audit ORDER BY seq DESC LIMIT 1').get() as { seq: number; digest: string } | undefined;
+    const record = { seq: (last?.seq ?? 0) + 1, id: randomUUID(), time: new Date().toISOString(), type, payload: redact(payload), previous: last?.digest ?? '0'.repeat(64) };
+    this.db.prepare('INSERT INTO audit VALUES(?,?,?,?,?,?,?)').run(record.seq, record.id, record.time, record.type, JSON.stringify(record.payload), record.previous, hash(record));
+  }
   // store methods
 }
