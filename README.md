@@ -60,7 +60,9 @@ Without a key, the console explicitly reports investigation unavailability. Dete
 
 ## Demonstrate the lifecycle
 
-In a second terminal:
+For the simplest walkthrough, run `npm run demo` (or double-click `Demo.cmd`), sign in, and click **Run a demo**. Start normal traffic, send a burst, and stop/restart Backend A with dashboard buttons. Security responses still require your separate review and approval. See the [guided demo](docs/demo.md).
+
+For optional command-line traffic, use a second terminal:
 
 ```sh
 npm run demo:traffic

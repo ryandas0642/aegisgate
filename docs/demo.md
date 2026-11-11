@@ -1,5 +1,20 @@
 # Repeatable local demonstration
 
+## Guided demo: one terminal, then dashboard buttons
+
+Run `npm run demo` (or double-click `Demo.cmd` on Windows), open http://127.0.0.1:4174, sign in, and click **Run a demo**.
+
+1. **Start normal traffic** — requests run automatically for up to five minutes.
+2. **Send traffic burst** — generates a real bounded burst from the test client.
+3. **Review incident** — opens its investigation. In Response center, review and approve the proposed action yourself; a manual fallback is available if needed.
+4. Reopen **Run a demo**, click **Check response**, then **View response** to inspect verification.
+
+For reliability, use **Stop backend A**, wait for it to become unavailable, then **Restart backend A**. No extra traffic terminal is needed. Use **Stop traffic** to end the generator. Closing the guide leaves normal traffic running until its five-minute limit.
+
+The harness operates only through the native launcher. Standalone or container consoles show the controls as unavailable. Demo controls require the operator session and CSRF token; the investigator cannot use them. They never approve a security response or clear audit history.
+
+The command-line walkthrough below remains available for inspecting individual steps.
+
 Use synthetic data only. Start the stack as described in the README, sign into the console, and wait for both backends to become healthy. The proxy is at `http://127.0.0.1:8180`; the console is at `http://127.0.0.1:4174`.
 
 ## Security scenario

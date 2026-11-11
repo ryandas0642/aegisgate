@@ -47,3 +47,10 @@ The captured UI uses actual synthetic local traffic and actual stored records. M
 ## Reproduction
 
 Follow the README setup, then rerun the listed commands. The browser check requires the local stack to be running and a usable browser; it can trigger a configured runtime investigator through actual detections. Fixture tests use isolated temporary databases and clean them up instead of mixing their records into the application audit history.
+
+## Guided demo update — November 11, 2026
+
+- `npm test`: **16 passed, 0 failed**, including bounded demo traffic and operator/CSRF protection for demo controls.
+- `npm run demo`: production UI build and native stack startup passed. `npm run build:runtime` passed.
+- Actual Edge browser: signed in, started normal traffic, generated a burst with HTTP 429 responses, stopped Backend A and observed unhealthy status, restarted it and observed recovery, sent target/control verification requests, and stopped traffic. No page runtime errors occurred.
+- Provider configuration was disabled only for this browser-check process. These checks do not establish live OpenRouter behavior or approval/enforcement; the existing response lifecycle tests cover that flow with explicit fixtures.
