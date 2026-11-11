@@ -249,6 +249,7 @@ export function App() {
               </button>
             </div>
           )}
+          {state && !online && <div className="notice"><span>Proxy telemetry is offline. Displayed values were last observed at {time(state.connection.receivedAt)}. Approvals require fresh proxy state.</span></div>}
           {state && tab === 'overview' && (
             <Overview state={state} navigate={setTab} choose={choose} />
           )}
@@ -276,7 +277,7 @@ export function App() {
                     </thead>
                     <tbody>
                       {state.events
-                        .filter((e) => e.type === 'request.completed')
+                        .filter((e) => e.type === 'request.completed' && e.epoch === state.snapshot?.epoch)
                         .slice(0, 25)
                         .map((event) => (
                           <tr key={event.id}>
@@ -327,14 +328,6 @@ export function App() {
             />
           )}
           {state && tab === 'audit' && <AuditView state={state} />}
-          {state && !online && (
-            <div className="notice">
-              <span>
-                Proxy telemetry is offline. Displayed values were last observed at{' '}
-                {time(state.connection.receivedAt)}. Approvals require fresh proxy state.
-              </span>
-            </div>
-          )}
           {!state && <div className="loading">Connecting to the operations control plane…</div>}
           <footer className="content-footer">
             <span>

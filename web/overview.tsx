@@ -198,7 +198,7 @@ export function IncidentTable({
                       {incident.kind === 'security'
                         ? 'Deterministic security rule'
                         : 'Deterministic health checks'}{' '}
-                      · {short(incident.id, 8)}
+                      · {incident.eventId.startsWith((state.snapshot?.epoch ?? '') + ':') ? 'Current lifetime' : 'Historical lifetime'} · {short(incident.id, 8)}
                     </small>
                   </span>
                 </div>
