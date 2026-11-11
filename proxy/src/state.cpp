@@ -37,5 +37,25 @@ void State::expire() {
         if(now-it->second.updated>std::chrono::minutes(5)) it=buckets.erase(it); else ++it;
     }
 }
+unsigned State::admit(const std::string& source) {
+    expire(); ++total; const auto ip=parseIPv4(source); auto now=Clock::now();
+    const bool blocked=rules.count(source)||config.deny.match(ip)||(config.hasAllow&&!config.allow.match(ip));
+    if(!buckets.count(ip)&&buckets.size()>=4096) {++limited; emit("request.completed",{{"source",source},{"status",429},{"reason","client_capacity"}}); return 429;}
+    auto [it,inserted]=buckets.try_emplace(ip);
+    auto& b=it->second;
+    if(inserted) {b.tokens=config.burst; b.updated=now; b.window=now;}
+    b.tokens=std::min(double(config.burst),b.tokens+std::chrono::duration<double>(now-b.updated).count()*config.ratePerSecond); b.updated=now;
+    unsigned status=0;
+    if(blocked) {++denied; status=403;} else if(b.tokens<1) {++limited; status=429;} else --b.tokens;
+    if(status) {
+        emit("request.completed",{{"source",source},{"status",status},{"reason",blocked?"source_denied":"rate_limited"}});
+        if(now-b.window>std::chrono::milliseconds(config.violationWindowMs)) {b.window=now;b.violations=0;}
+        ++b.violations;
+        if(b.violations>=config.violationThreshold&&(b.lastIncident==Clock::time_point{}||now-b.lastIncident>=std::chrono::seconds(30))) {
+            emit("detection.security",{{"source",source},{"violations",b.violations},{"windowMs",config.violationWindowMs},{"reason",blocked?"repeated_denial":"rate_limit_burst"}}); b.lastIncident=now;
+        }
+    }
+    return status;
+}
 // state methods
 }
