@@ -148,6 +148,7 @@ export function App() {
               className={tab === item.id ? 'nav-item active' : 'nav-item'}
               onClick={() => setTab(item.id)}
               title={item.label}
+                aria-label={item.label}
             >
               <Icon name={item.icon} size={19} />
               <span>{item.label}</span>

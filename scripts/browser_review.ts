@@ -44,6 +44,7 @@ try {
   assert.ok(codes.includes(429), 'controlled burst must actually hit the proxy rate limit');
   await page.getByRole('button', { name: 'Incidents', exact: true }).click();
   await page.getByText('Source violation threshold', { exact: true }).first().waitFor();
+  await page.getByText(/Current lifetime/).first().waitFor();
   await page.getByRole('button', { name: 'Overview', exact: true }).click();
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'desktop document must not overflow horizontally');
   await page.screenshot({ path: resolve(output, 'overview.png'), fullPage: true });

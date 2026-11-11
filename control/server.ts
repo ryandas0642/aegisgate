@@ -31,7 +31,7 @@ const childEnvironment = Object.fromEntries(
 app.server.listen(config.port, config.bind, () => {
   console.log(`AegisGate console: http://127.0.0.1:${config.port}`);
   console.log(
-    `Operator password is stored locally in ${resolve(config.directory, 'secrets.json')}`,
+    `Sign in with AEGIS_OPERATOR_PASSWORD from .env/environment, or the fallback in ${resolve(config.directory, 'secrets.json')}`,
   );
   console.log(
     config.inference.key
