@@ -32,7 +32,11 @@ test('operator and worker credentials stay separate; Host, Origin, and CSRF prot
       body: JSON.stringify(body),
     });
   assert.equal((await fetch(origin + '/api/state')).status, 401);
-  assert.equal((await post('/api/demo', { action: 'stop-a' }, { Authorization: 'Bearer ' + agentToken })).status, 401);
+  assert.equal(
+    (await post('/api/demo', { action: 'stop-a' }, { Authorization: 'Bearer ' + agentToken }))
+      .status,
+    401,
+  );
   assert.equal((await post('/api/login', { password: 'wrong' })).status, 409);
   assert.equal(
     (await post('/api/login', { password }, { Origin: 'https://attacker.invalid' })).status,
@@ -42,9 +46,22 @@ test('operator and worker credentials stay separate; Host, Origin, and CSRF prot
     cookie = login.headers.get('set-cookie')!.split(';')[0],
     session = (await login.json()) as { csrf: string };
   const p = await app.broker.propose(incident.id, action(), 'fixture');
-  assert.equal((await post('/api/demo', {action:'stop-a'}, {Cookie:cookie})).status,401);
-  assert.equal((await post('/api/demo', {action:'shell'}, {Cookie:cookie,'X-CSRF-Token':session.csrf})).status,409);
-  assert.equal((await post('/api/demo', {action:'stop-a'}, {Cookie:cookie,'X-CSRF-Token':session.csrf})).status,200);
+  assert.equal((await post('/api/demo', { action: 'stop-a' }, { Cookie: cookie })).status, 401);
+  assert.equal(
+    (await post('/api/demo', { action: 'shell' }, { Cookie: cookie, 'X-CSRF-Token': session.csrf }))
+      .status,
+    409,
+  );
+  assert.equal(
+    (
+      await post(
+        '/api/demo',
+        { action: 'stop-a' },
+        { Cookie: cookie, 'X-CSRF-Token': session.csrf },
+      )
+    ).status,
+    200,
+  );
   assert.equal(
     (
       await post(
