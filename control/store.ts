@@ -14,7 +14,8 @@ export class Store {
       CREATE TABLE IF NOT EXISTS incidents (id TEXT PRIMARY KEY, eventId TEXT UNIQUE, data TEXT);
       CREATE TABLE IF NOT EXISTS proposals (id TEXT PRIMARY KEY, data TEXT);
       CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, data TEXT);
-      CREATE INDEX IF NOT EXISTS event_type ON events(type);`);
+      CREATE INDEX IF NOT EXISTS event_type ON events(type);
+      CREATE TABLE IF NOT EXISTS tool_evidence (id TEXT PRIMARY KEY, data TEXT);`);
   }
   audit(type: string, payload: unknown): void {
     const last = this.db.prepare('SELECT seq, digest FROM audit ORDER BY seq DESC LIMIT 1').get() as { seq: number; digest: string } | undefined;
@@ -35,7 +36,11 @@ export class Store {
   proposal(id: string): Proposal | undefined { const row = this.db.prepare('SELECT data FROM proposals WHERE id=?').get(id) as { data: string } | undefined; return row ? JSON.parse(row.data) : undefined; }
   proposals(): Proposal[] { return (this.db.prepare('SELECT data FROM proposals ORDER BY rowid DESC LIMIT 100').all() as { data: string }[]).map(row => JSON.parse(row.data)); }
   events(limit = 100): Evidence[] { return (this.db.prepare('SELECT data FROM events ORDER BY rowid DESC LIMIT ?').all(Math.min(500, Math.max(1, limit))) as { data: string }[]).map(row => JSON.parse(row.data)); }
-  evidence(id: string): Evidence | undefined { const row = this.db.prepare('SELECT data FROM events WHERE id=?').get(id) as { data: string } | undefined; return row ? JSON.parse(row.data) : undefined; }
+  evidence(id: string): Evidence | undefined { const row = (this.db.prepare('SELECT data FROM events WHERE id=?').get(id) || this.db.prepare('SELECT data FROM tool_evidence WHERE id=?').get(id)) as { data: string } | undefined; return row ? JSON.parse(row.data) : undefined; }
+  toolEvidence(id: string, result: unknown, incident: Incident): void {
+    const value = { id, time: new Date().toISOString(), type: 'tool.evidence', source: incident.source, backend: incident.backend, result };
+    this.db.prepare('INSERT OR IGNORE INTO tool_evidence VALUES(?,?)').run(id, JSON.stringify(redact(value)));
+  }
   ingest(snapshot: Snapshot): void {
     this.transaction(() => {
       const cursor = this.get<{ epoch: string; sequence: number }>('cursor');

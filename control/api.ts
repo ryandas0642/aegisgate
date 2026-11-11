@@ -69,6 +69,7 @@ export function createApi(options: Options) {
     const input = await body(request, 512 * 1024), job = jobFor(input.jobId), incident = store.incident(job.incidentId)!;
     if (path === '/internal/tool') {
       const result = investigateTool(store, incident, input.request);
+      store.toolEvidence((result as { id: string }).id, result, incident);
       const collect = (value: unknown): void => { if (Array.isArray(value)) value.forEach(collect); else if (value && typeof value === 'object') { const o = value as Record<string, unknown>; if (typeof o.id === 'string' && !job.evidenceIds.includes(o.id)) job.evidenceIds.push(o.id); Object.values(o).forEach(collect); } };
       collect(result); store.set('job:' + job.id, job); return json(response, 200, result);
     }
@@ -117,6 +118,11 @@ export function createApi(options: Options) {
       if (url.pathname.startsWith('/api/')) {
         let session; try { session = auth.session(request, request.method !== 'GET'); } catch { return json(response, 401, { error: 'Operator sign-in or CSRF token required' }); }
         if (request.method === 'GET' && url.pathname === '/api/session') return json(response, 200, { csrf: session.csrf });
+        if (request.method === 'GET' && url.pathname.startsWith('/api/evidence/')) {
+          const id = decodeURIComponent(url.pathname.slice('/api/evidence/'.length));
+          const evidence = id.length <= 150 ? store.evidence(id) : undefined;
+          return json(response, evidence ? 200 : 404, evidence ?? { error: 'Evidence record not retained' });
+        }
         if (request.method === 'GET' && url.pathname === '/api/state') return json(response, 200, { snapshot: store.get('snapshot') ?? null, connection: store.get('connection') ?? { online: false }, incidents: store.incidents(), proposals: store.proposals(), events: store.events(100), audit: store.auditRecords(100), auditIntegrity: store.verifyAudit(), samples, provider: { name: 'OpenRouter', model: options.model, configured: options.providerConfigured, mode: 'live' } });
         if (request.method === 'POST' && url.pathname === '/api/logout') { auth.logout(request); response.setHeader('Set-Cookie', 'aegis_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'); return json(response, 200, { signedOut: true }); }
         const match = url.pathname.match(/^\/api\/proposals\/([0-9a-f-]{36})\/(approve|reject)$/);

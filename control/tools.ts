@@ -1,5 +1,6 @@
 import { Store } from './store.js';
 import type { Incident, Snapshot, ToolRequest } from './types.js';
+import { hash } from './security.js';
 
 export function investigateTool(store: Store, incident: Incident, request: ToolRequest): unknown {
   if (!['recent_events', 'metrics', 'backend_health', 'active_rules'].includes(request.tool)) throw new Error('Tool not granted to the investigator');
@@ -8,7 +9,7 @@ export function investigateTool(store: Store, incident: Incident, request: ToolR
   const snapshot = store.get<Snapshot>('snapshot');
   const connection = store.get<{ online: boolean; receivedAt: number }>('connection');
   if (!snapshot || !connection?.online || Date.now() - connection.receivedAt > 3000) throw new Error('Proxy evidence is unavailable or stale');
-  const id = `snapshot:${snapshot.epoch}:${snapshot.sequence}:${request.tool}`;
+  const id = 'tool:' + hash({ epoch: snapshot.epoch, sequence: snapshot.sequence, tool: request.tool, limit: args.limit, incidentId: incident.id });
   const events = store.events(500).filter(event => incident.source ? event.source === incident.source : event.backend === incident.backend).slice(0, Number(args.limit));
   switch (request.tool) {
     case 'recent_events': return { id, observedAt: snapshot.observedAt, evidence: events };
