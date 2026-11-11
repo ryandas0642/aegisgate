@@ -57,5 +57,13 @@ unsigned State::admit(const std::string& source) {
     }
     return status;
 }
+std::optional<std::size_t> State::selectBackend() {
+    const auto count=config.backends.size();
+    for(std::size_t attempt=0;attempt<count;++attempt) {
+        const auto index=(nextBackend+attempt)%count;
+        if(config.backends[index].healthy) {nextBackend=(index+1)%count; ++config.backends[index].requests; return index;}
+    }
+    return std::nullopt;
+}
 // state methods
 }

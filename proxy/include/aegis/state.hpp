@@ -26,7 +26,7 @@ struct Config {
     std::vector<Backend> backends;
 };
 struct Bucket { double tokens=0; Clock::time_point updated{}, window{}, lastIncident{}; unsigned violations=0; };
-struct Rule { std::string actionId, source, expiresAt; Clock::time_point expires; };
+struct Rule { std::string actionId, source; std::uint64_t expiresAtMs; Clock::time_point expires; };
 Config loadConfig(const std::string& path);
 std::string utcNow();
 struct State {
