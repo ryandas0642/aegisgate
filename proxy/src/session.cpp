@@ -47,5 +47,28 @@ void Session::run() {
         self->header();
     });
 }
+void Session::header() {
+    const auto& h=parser_.get();
+    if(h.version()!=11) return reply(505,"only HTTP/1.1 is supported");
+    if(h.count(http::field::host)!=1||h.count(http::field::content_length)>1||h.count(http::field::transfer_encoding)) return reply(400,"ambiguous or unsupported framing");
+    if(h.count(http::field::expect)) return reply(417,"expectations are unsupported");
+    if(h.target().empty()||h.target()[0]!='/'||h.target().size()>2048) return reply(400,"origin-form target required");
+    if(admin_) {
+        const std::string expected="Bearer "+state_->token,actual=std::string(h[http::field::authorization]);
+        unsigned difference=unsigned(expected.size()^actual.size());
+        if(expected.size()==actual.size()) for(std::size_t i=0;i<expected.size();++i) difference|=unsigned(expected[i]^actual[i]);
+        if(difference||h.count(http::field::authorization)!=1) return reply(401,"administrative authentication required");
+    } else {
+        if(h.method()!=http::verb::get&&h.method()!=http::verb::head&&h.method()!=http::verb::post) return reply(405,"method unsupported");
+        if(h.method()==http::verb::post&&!parser_.content_length()) return reply(411,"Content-Length required");
+        if(h.method()!=http::verb::post&&parser_.content_length().value_or(0)!=0) return reply(400,"GET and HEAD bodies unsupported");
+        if(const auto status=state_->admit(source_)) return reply(status,status==403?"source denied":"client rate limit exceeded");
+    }
+    if(parser_.is_done()) {request_=parser_.release(); return dispatch();}
+    http::async_read(client_,input_,parser_,[self=shared_from_this()](beast::error_code ec,std::size_t){
+        if(ec) return self->reply(ec==http::error::body_limit?413:400,"request body rejected");
+        self->request_=self->parser_.release(); self->dispatch();
+    });
+}
 // session methods
 }
