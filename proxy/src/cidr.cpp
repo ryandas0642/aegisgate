@@ -17,4 +17,9 @@ void Cidrs::addRange(const std::string& cidr) {
     ranges_.push_back({ip & mask, mask, cidr});
 }
 
+std::optional<std::string> Cidrs::match(std::uint32_t source) const {
+    for (const auto& range : ranges_)
+        if ((source & range.mask) == range.network) return range.cidr;
+    return std::nullopt;
+}
 }
