@@ -45,6 +45,12 @@ try {
   await page.getByRole('button', { name: 'Incidents', exact: true }).click();
   await page.getByText('Source violation threshold', { exact: true }).first().waitFor();
   await page.getByText(/Current lifetime/).first().waitFor();
+  const choice = await page.waitForFunction(async () => {
+    const state = await (await fetch('/api/state')).json();
+    return state.incidents.find((incident: any) => incident.source === '127.0.0.2' && incident.eventId.startsWith(state.snapshot.epoch + ':') && !state.proposals.some((proposal: any) => proposal.content.incidentId === incident.id && ['proposed','executing','applied','verified','inconclusive','uncertain'].includes(proposal.status)))?.id || false;
+  });
+  const incidentId = String(await choice.jsonValue());
+  await page.getByRole('row').filter({ hasText: incidentId.slice(0, 8) }).click();
   await page.getByRole('button', { name: 'Overview', exact: true }).click();
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'desktop document must not overflow horizontally');
   await page.screenshot({ path: resolve(output, 'overview.png'), fullPage: true });
@@ -97,6 +103,10 @@ try {
       2,
     ),
   );
+} catch (error) {
+  await page.screenshot({ path: resolve(output, 'failure.png'), fullPage: true });
+  console.error(JSON.stringify({ visibleErrors: await page.locator('[role="alert"], .error').allTextContents(), dialogs: await page.getByRole('dialog').count() }));
+  throw error;
 } finally {
   await browser.close();
 }

@@ -25,6 +25,10 @@ export function App() {
   const [selected, setSelected] = useState(''),
     [demo, setDemo] = useState(false);
   useEffect(() => {
+    if (!state) return;
+    setSelected(current => state.incidents.some(incident => incident.id === current) ? current : state.incidents[0]?.id || '');
+  }, [state]);
+  useEffect(() => {
     api('/api/session')
       .then(() => setAuthenticated(true))
       .catch(() => setAuthenticated(false));
