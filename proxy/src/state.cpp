@@ -27,5 +27,15 @@ void State::emit(const std::string& type,json::object fields) {
     if(events.size()>=2048) events.pop_front();
     events.push_back(std::move(fields));
 }
+void State::expire() {
+    auto now=Clock::now();
+    for(auto it=rules.begin();it!=rules.end();) {
+        if(it->second.expires<=now) {emit("rule.expired",{{"source",it->first},{"actionId",it->second.actionId}}); it=rules.erase(it); ++revision;}
+        else ++it;
+    }
+    for(auto it=buckets.begin();it!=buckets.end();) {
+        if(now-it->second.updated>std::chrono::minutes(5)) it=buckets.erase(it); else ++it;
+    }
+}
 // state methods
 }
