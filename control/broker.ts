@@ -100,6 +100,8 @@ export class Broker {
     ) {
       proposal.status = 'stale';
       this.store.putProposal(proposal);
+      const incident = this.store.incident(proposal.content.incidentId);
+      if (incident) { incident.status = incident.finding ? 'investigated' : 'unavailable'; this.store.putIncident(incident); }
       this.store.audit('approval.rejected', { id, reason: 'expired or changed state' });
       throw new Error('Proposal expired or proxy state changed; investigate and propose again');
     }

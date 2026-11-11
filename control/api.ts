@@ -74,6 +74,16 @@ export function createApi(options: Options) {
     if (polling) return;
     polling = true;
     try {
+      for (const incident of store.incidents()) {
+        const id = store.get<string>('active-job:' + incident.id);
+        const job = id ? store.get<Job>('job:' + id) : undefined;
+        if (job?.status === 'running' && Date.now() > job.expires) {
+          job.status = 'expired'; store.set('job:' + job.id, job);
+          if (job.reviewId) store.set('review:' + job.reviewId, { status: 'unavailable' });
+          else if (incident.status === 'investigating') { incident.status = 'unavailable'; store.putIncident(incident); }
+          store.audit('investigation.expired', { jobId: job.id, incidentId: incident.id });
+        }
+      }
       const snapshot = await proxy.snapshot();
       store.ingest(snapshot);
       broker.reconcile(snapshot);
@@ -131,6 +141,7 @@ export function createApi(options: Options) {
         store.putIncident(incident);
       }
       store.set('job:' + job.id, job);
+      store.set('active-job:' + incident.id, job.id);
       store.audit('investigation.started', {
         jobId: job.id,
         incidentId: incident.id,
