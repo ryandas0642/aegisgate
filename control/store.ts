@@ -36,5 +36,21 @@ export class Store {
   proposals(): Proposal[] { return (this.db.prepare('SELECT data FROM proposals ORDER BY rowid DESC LIMIT 100').all() as { data: string }[]).map(row => JSON.parse(row.data)); }
   events(limit = 100): Evidence[] { return (this.db.prepare('SELECT data FROM events ORDER BY rowid DESC LIMIT ?').all(Math.min(500, Math.max(1, limit))) as { data: string }[]).map(row => JSON.parse(row.data)); }
   evidence(id: string): Evidence | undefined { const row = this.db.prepare('SELECT data FROM events WHERE id=?').get(id) as { data: string } | undefined; return row ? JSON.parse(row.data) : undefined; }
+  ingest(snapshot: Snapshot): void {
+    this.transaction(() => {
+      const cursor = this.get<{ epoch: string; sequence: number }>('cursor');
+      if (cursor?.epoch === snapshot.epoch && cursor.sequence + 1 < snapshot.oldestSequence) this.audit('telemetry.gap', { expected: cursor.sequence + 1, oldest: snapshot.oldestSequence, epoch: snapshot.epoch });
+      if (cursor && cursor.epoch !== snapshot.epoch) this.audit('proxy.restarted', { previous: cursor.epoch, current: snapshot.epoch });
+      for (const event of snapshot.events) {
+        const inserted = this.db.prepare('INSERT OR IGNORE INTO events VALUES(?,?,?,?)').run(event.id, event.time, event.type, JSON.stringify(event));
+        if (!inserted.changes || !event.type.startsWith('detection.')) continue;
+        const incident: Incident = { id: randomUUID(), eventId: event.id, kind: event.type === 'detection.security' ? 'security' : 'reliability', source: event.source, backend: event.backend, createdAt: event.time, status: 'detected' };
+        this.putIncident(incident); this.audit('incident.detected', { incident, evidence: event });
+      }
+      this.set('cursor', { epoch: snapshot.epoch, sequence: snapshot.sequence });
+      this.set('snapshot', { ...snapshot, events: [] });
+      this.set('connection', { online: true, receivedAt: Date.now(), error: null });
+    });
+  }
   // store methods
 }
