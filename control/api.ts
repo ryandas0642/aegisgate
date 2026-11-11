@@ -126,11 +126,12 @@ export function createApi(options: Options) {
     if (!incident) return null;
     const detection = store.evidence(incident.eventId);
     if (!detection) return null;
+    const verificationEvidence = [review?.verification?.deniedEvidence, review?.verification?.controlTrafficEvidence].flatMap(id => typeof id === 'string' && store.evidence(id) ? [store.evidence(id)!] : []);
     const job: Job = {
       id: randomUUID(),
       incidentId: incident.id,
       ...(review ? { reviewId: review.id } : {}),
-      evidenceIds: [detection.id],
+      evidenceIds: [detection.id, ...verificationEvidence.map(event => event.id)],
       expires: Date.now() + 125000,
       status: 'running',
     };
@@ -155,6 +156,7 @@ export function createApi(options: Options) {
         ? {
             ...incident,
             verification: review.verification,
+            verificationEvidence,
             phase: 'verification',
             instruction:
               'Review these deterministic verification results. Inspect current evidence if useful. Do not propose another action.',

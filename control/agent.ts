@@ -18,6 +18,7 @@ export async function investigate(
   dependencies: AgentDependencies,
 ) {
   const evidence = new Set([detection.id]);
+  for (const event of incident.verificationEvidence ?? []) evidence.add(event.id);
   const history: unknown[] = [];
   let tools = 0;
   const deadline = Date.now() + 120000;
@@ -51,6 +52,7 @@ export async function investigate(
       continue;
     }
     if (decision.proposal) {
+      if (incident.phase === 'verification') throw new Error('Verification reviews cannot propose another action');
       if (!tools)
         throw new Error('An action proposal requires an actual investigation tool result');
       if (

@@ -44,6 +44,9 @@ export type Snapshot = {
   events: Evidence[];
 };
 export type Incident = {
+  phase?: 'verification';
+  verification?: Record<string, unknown>;
+  verificationEvidence?: Evidence[];
   id: string;
   eventId: string;
   kind: 'security' | 'reliability';
