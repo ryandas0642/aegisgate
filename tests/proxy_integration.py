@@ -122,6 +122,27 @@ def proxy(**overrides):
 
 
 class ProxyTests(unittest.TestCase):
+    def test_request_boundaries_and_malformed_framing(self):
+        with proxy() as (c, *_):
+            self.assertEqual(request(c["port"], "PUT")[0], 405)
+            self.assertEqual(request(c["port"], "POST", body="x" * 65537)[0], 413)
+            self.assertEqual(request(c["port"], headers={"X-Large": "x" * 17000})[0], 431)
+            for packet in [b"GET / HTTP/1.0\r\nHost: local\r\n\r\n", b"GET / HTTP/1.1\r\n\r\n", b"POST / HTTP/1.1\r\nHost: local\r\nContent-Length: 1\r\nTransfer-Encoding: chunked\r\n\r\n", b"GET / HTTP/1.1\r\nHost: a\r\nHost: b\r\n\r\n", b"garbage\r\n\r\n"]:
+                with socket.create_connection(("127.0.0.1", c["port"]), timeout=2) as s:
+                    s.sendall(packet)
+                    result = s.recv(4096)
+                    self.assertTrue(result.startswith((b"HTTP/1.1 400", b"HTTP/1.1 505")), result)
+
+    def test_cidr_deny_allow_precedence_and_client_rate_limit(self):
+        with proxy(allow=["127.0.0.0/8"], deny=["127.0.0.2/32"]) as (c, state, *_):
+            self.assertEqual(request(c["port"], source="127.0.0.2")[0], 403)
+            self.assertEqual(request(c["port"])[0], 200)
+        with proxy(ratePerSecond=1, burst=2, violationThreshold=2) as (c, state, *_):
+            statuses = [request(c["port"], source="127.0.0.2", headers={"X-Forwarded-For": f"198.51.100.{n}"})[0] for n in range(4)]
+            self.assertEqual(statuses, [200, 200, 429, 429])
+            self.assertEqual(request(c["port"])[0], 200)
+            self.assertTrue(any(e["type"] == "detection.security" and e["source"] == "127.0.0.2" for e in state()["events"]))
+
     def test_health_failure_removal_recovery_and_no_backends(self):
         with proxy() as (c, state, a, b):
             port = a.server_port
