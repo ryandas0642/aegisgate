@@ -21,6 +21,7 @@ struct Config {
     unsigned healthIntervalMs=500, healthTimeoutMs=400, failureThreshold=2, recoveryThreshold=2;
     unsigned requestTimeoutMs=3000, maxConnections=64, ratePerSecond=10, burst=20;
     unsigned violationThreshold=10, violationWindowMs=5000;
+    bool hasAllow=false;
     Cidrs allow, deny, eligible, protectedSources;
     std::vector<Backend> backends;
 };

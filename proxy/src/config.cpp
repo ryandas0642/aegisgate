@@ -32,6 +32,7 @@ Config loadConfig(const std::string& path) {
         if(o.contains(pair.first)) { auto& a=o.at(pair.first).as_array(); if(a.size()>128) throw std::runtime_error("too many CIDRs"); for(auto& x:a) pair.second->addRange(std::string(x.as_string())); }
     }
     if(!o.contains("backends")||o.at("backends").as_array().empty()||o.at("backends").as_array().size()>16) throw std::runtime_error("configure 1 to 16 backends");
+    c.hasAllow=o.contains("allow")&&!o.at("allow").as_array().empty();
     std::set<std::string> ids;
     for(const auto& item:o.at("backends").as_array()) {
         const auto& b=item.as_object();
