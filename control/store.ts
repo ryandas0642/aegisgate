@@ -28,5 +28,13 @@ export class Store {
   }
   set(key: string, data: unknown): void { this.db.prepare('INSERT INTO meta VALUES(?,?) ON CONFLICT(key) DO UPDATE SET data=excluded.data').run(key, JSON.stringify(data)); }
   get<T>(key: string): T | undefined { const row = this.db.prepare('SELECT data FROM meta WHERE key=?').get(key) as { data: string } | undefined; return row ? JSON.parse(row.data) as T : undefined; }
+  putIncident(incident: Incident): void { this.db.prepare('INSERT INTO incidents VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data').run(incident.id, incident.eventId, JSON.stringify(incident)); }
+  incident(id: string): Incident | undefined { const row = this.db.prepare('SELECT data FROM incidents WHERE id=?').get(id) as { data: string } | undefined; return row ? JSON.parse(row.data) : undefined; }
+  incidents(): Incident[] { return (this.db.prepare('SELECT data FROM incidents ORDER BY rowid DESC LIMIT 100').all() as { data: string }[]).map(row => JSON.parse(row.data)); }
+  putProposal(proposal: Proposal): void { this.db.prepare('INSERT INTO proposals VALUES(?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data').run(proposal.id, JSON.stringify(proposal)); }
+  proposal(id: string): Proposal | undefined { const row = this.db.prepare('SELECT data FROM proposals WHERE id=?').get(id) as { data: string } | undefined; return row ? JSON.parse(row.data) : undefined; }
+  proposals(): Proposal[] { return (this.db.prepare('SELECT data FROM proposals ORDER BY rowid DESC LIMIT 100').all() as { data: string }[]).map(row => JSON.parse(row.data)); }
+  events(limit = 100): Evidence[] { return (this.db.prepare('SELECT data FROM events ORDER BY rowid DESC LIMIT ?').all(Math.min(500, Math.max(1, limit))) as { data: string }[]).map(row => JSON.parse(row.data)); }
+  evidence(id: string): Evidence | undefined { const row = this.db.prepare('SELECT data FROM events WHERE id=?').get(id) as { data: string } | undefined; return row ? JSON.parse(row.data) : undefined; }
   // store methods
 }
