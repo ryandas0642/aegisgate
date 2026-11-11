@@ -1,0 +1,20 @@
+{
+  "name": "aegisgate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.14.0" },
+  "scripts": {
+    "dev": "tsx scripts/dev.ts",
+    "dev:ui": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "build:proxy": "python scripts/build_proxy.py",
+    "test": "tsx --test tests/*.test.ts",
+    "test:proxy": "python tests/proxy_integration.py",
+    "test:e2e": "tsx --test tests/e2e.test.ts",
+    "start": "tsx control/server.ts",
+    "demo:traffic": "tsx scripts/traffic.ts"
+  },
+  "dependencies": { "ajv": "8.17.1", "react": "19.1.1", "react-dom": "19.1.1" },
+  "devDependencies": { "@types/node": "22.14.0", "@types/react": "19.1.13", "@types/react-dom": "19.1.9", "@vitejs/plugin-react": "4.7.0", "tsx": "4.20.5", "typescript": "5.9.2", "vite": "6.3.6", "@playwright/test": "1.55.1" }
+}
