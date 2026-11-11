@@ -8,9 +8,9 @@ namespace aegis {
 Session::Session(tcp::socket socket,std::shared_ptr<State> state,bool admin)
     :state_(std::move(state)),client_(std::move(socket)),upstream_(client_.get_executor()),resolver_(client_.get_executor()),deadline_(client_.get_executor()),input_(81920),output_(1064960),admin_(admin) {
     source_=client_.socket().remote_endpoint().address().to_v4().to_string();
-    if(!admin_) ++state_->connections;
+    if(!admin_) ++state_->connections; else ++state_->adminConnections;
 }
-Session::~Session() {if(!admin_) --state_->connections;}
+Session::~Session() {if(!admin_) --state_->connections;else --state_->adminConnections;}
 void Session::close() {
     beast::error_code ignored; deadline_.cancel(); resolver_.cancel();
     client_.socket().shutdown(tcp::socket::shutdown_both,ignored); client_.socket().close(ignored); upstream_.socket().close(ignored);
@@ -34,7 +34,10 @@ void Session::send() {
         if(response_.result_int()!=403&&response_.result_int()!=429) state_->emit("request.completed",std::move(event));
     }
     client_.expires_after(std::chrono::milliseconds(state_->config.requestTimeoutMs));
-    http::async_write(client_,response_,[self=shared_from_this()](beast::error_code,std::size_t){self->close();});
+    const auto finish=[self=shared_from_this()](beast::error_code,std::size_t){self->close();};
+    if(request_.method()==http::verb::head||parser_.get().method()==http::verb::head) {
+        serializer_.emplace(response_); http::async_write_header(client_,*serializer_,finish);
+    } else http::async_write(client_,response_,finish);
 }
 void Session::run() {
     parser_.header_limit(admin_?8192:16384); parser_.body_limit(admin_?4096:65536);

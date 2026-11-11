@@ -33,7 +33,7 @@ struct State {
     Config config;
     std::string token, epoch;
     std::uint64_t revision=0, sequence=0, total=0, forwarded=0, denied=0, limited=0, errors=0;
-    unsigned connections=0; std::size_t nextBackend=0;
+    unsigned connections=0, adminConnections=0; std::size_t nextBackend=0;
     std::deque<json::object> events;
     std::map<std::uint32_t, Bucket> buckets;
     std::map<std::string, Rule> rules;

@@ -19,6 +19,7 @@ class Session:public std::enable_shared_from_this<Session> {
     http::response_parser<http::string_body> upstreamParser_;
     http::request<http::string_body> request_;
     http::response<http::string_body> response_;
+    std::optional<http::response_serializer<http::string_body>> serializer_;
     bool admin_,responding_=false;
     std::string source_;
     std::optional<std::size_t> backend_;
