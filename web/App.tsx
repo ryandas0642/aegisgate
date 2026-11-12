@@ -7,6 +7,7 @@ import { InvestigationView } from './investigation';
 import { ResponseView } from './response';
 import { AuditView } from './audit';
 import { DemoPanel } from './demo';
+import { LoadBalancer } from './load-balancer';
 
 const navigation = [
   { id: 'overview', label: 'Overview', icon: 'grid' },
@@ -272,6 +273,7 @@ export function App() {
           )}
           {state && tab === 'traffic' && (
             <>
+              <LoadBalancer state={state} />
               <div className="overview-grid">
                 <Panel title="Observed request rates" eyebrow="LIVE PROXY COUNTERS">
                   <TrafficChart state={state} />

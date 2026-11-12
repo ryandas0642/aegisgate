@@ -1884,3 +1884,129 @@ input::placeholder {
     max-width: 200px;
   }
 }
+.load-balancer {
+  margin: 24px 0;
+}
+.lb-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 20px 24px 0;
+}
+.lb-controls > span {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+  flex-basis: 100%;
+  margin-top: 4px;
+}
+.lb-controls .button {
+  font-size: 12px;
+  padding: 10px 14px;
+}
+.lb-diagram {
+  padding: 4px 16px 0;
+}
+.lb-diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.lb-diagram text {
+  font-family: inherit;
+  font-size: 11px;
+  fill: #8fa7b5;
+}
+.lb-diagram .lb-node-title {
+  font-size: 15px;
+  fill: #e0edf0;
+  font-weight: 600;
+}
+.lb-link {
+  fill: none;
+  stroke: #2c4552;
+  stroke-width: 2;
+}
+.lb-active {
+  stroke: #338b7c;
+}
+.lb-inactive {
+  stroke: #52606b;
+  stroke-dasharray: 7 7;
+  opacity: 0.55;
+}
+.lb-reject-link {
+  fill: none;
+  stroke: #735a36;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 5;
+}
+.lb-node rect {
+  fill: #111f2a;
+  stroke: #304758;
+}
+.lb-proxy rect {
+  fill: #102b2b;
+  stroke: #45b9a7;
+}
+.lb-healthy rect {
+  fill: #10231f;
+  stroke: #386b59;
+}
+.lb-healthy circle {
+  fill: #62d9a0;
+}
+.lb-down rect {
+  fill: #201e1b;
+  stroke: #716044;
+}
+.lb-down circle {
+  fill: #e6b066;
+}
+.lb-diagram .lb-reject-label {
+  fill: #c9a363;
+  font-size: 12px;
+}
+.lb-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 0 24px 16px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.lb-legend span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.lb-note {
+  margin: 12px 24px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.lb-note.error {
+  color: #f4a7a7;
+}
+@media (max-width: 700px) {
+  .lb-controls {
+    padding: 16px 16px 0;
+  }
+  .lb-diagram {
+    overflow-x: auto;
+    padding: 0 8px;
+  }
+  .lb-diagram svg {
+    min-width: 630px;
+  }
+  .lb-legend {
+    padding: 0 16px 16px;
+    gap: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-packet {
+    display: none;
+  }
+}

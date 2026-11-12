@@ -1,5 +1,6 @@
 import { Badge, Empty, Icon, Panel } from './primitives';
 import { short, statusText, time, type ConsoleState } from './api';
+import { LoadBalancer } from './load-balancer';
 
 export function TrafficChart({ state }: { state: ConsoleState }) {
   const samples = state.samples;
@@ -336,6 +337,7 @@ export function Overview({
           </button>
         </div>
       </div>
+      <LoadBalancer state={state} />
       <div className="overview-grid">
         <Panel
           title="Traffic at the edge"
