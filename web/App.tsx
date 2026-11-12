@@ -6,10 +6,9 @@ import { Panel } from './primitives';
 import { InvestigationView } from './investigation';
 import { ResponseView } from './response';
 import { AuditView } from './audit';
-import { CyberDemo } from './cyber-demo';
+import { DemoPanel } from './demo';
 
 const navigation = [
-  { id: 'demo', label: 'Cyber demo', icon: 'shield' },
   { id: 'overview', label: 'Overview', icon: 'grid' },
   { id: 'traffic', label: 'Traffic & health', icon: 'traffic' },
   { id: 'incidents', label: 'Incidents', icon: 'incident' },
@@ -23,8 +22,9 @@ export function App() {
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
   const [state, setState] = useState<ConsoleState | null>(null),
-    [tab, setTab] = useState('demo');
-  const [selected, setSelected] = useState('');
+    [tab, setTab] = useState('overview');
+  const [selected, setSelected] = useState(''),
+    [demo, setDemo] = useState(false);
   useEffect(() => {
     if (!state) return;
     setSelected((current) =>
@@ -219,7 +219,6 @@ export function App() {
                 {
                   (
                     {
-                      demo: 'Investigate. Contain. Verify.',
                       overview: 'Your perimeter, in view.',
                       traffic: 'Every request has a route.',
                       incidents: 'Signals worth your attention.',
@@ -234,7 +233,6 @@ export function App() {
                 {
                   (
                     {
-                      demo: 'A guided security response, from suspicious traffic to verified containment.',
                       overview: 'Real traffic. Observable decisions. Human-supervised response.',
                       traffic: 'Routing distribution and backend health from the running proxy.',
                       incidents: 'Deterministic detections, with context before conclusions.',
@@ -248,12 +246,10 @@ export function App() {
                 }
               </p>
             </div>
-            {tab !== 'demo' && (
-              <button className="button secondary" onClick={() => setTab('demo')}>
-                <Icon name="terminal" size={16} />
-                Run a demo
-              </button>
-            )}
+            <button className="button secondary" onClick={() => setDemo(true)}>
+              <Icon name="terminal" size={16} />
+              Run a demo
+            </button>
           </div>
           {error && (
             <div className="notice error" role="alert">
@@ -271,7 +267,6 @@ export function App() {
               </span>
             </div>
           )}
-          {state && tab === 'demo' && <CyberDemo state={state} refresh={refresh} />}
           {state && tab === 'overview' && (
             <Overview state={state} navigate={setTab} choose={choose} />
           )}
@@ -362,6 +357,15 @@ export function App() {
           </footer>
         </main>
       </div>
+      {demo && (
+        <DemoPanel
+          close={() => setDemo(false)}
+          openIncident={(id, response) => {
+            choose(id, response ? 'response' : 'investigation');
+            setDemo(false);
+          }}
+        />
+      )}
     </div>
   );
 }
