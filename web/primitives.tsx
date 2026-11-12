@@ -157,7 +157,6 @@ export function Panel({
     <section className={`panel ${className}`}>
       <div className="panel-head">
         <div>
-          {eyebrow && <span className="eyebrow">{eyebrow}</span>}
           <h2>{title}</h2>
         </div>
         {action}

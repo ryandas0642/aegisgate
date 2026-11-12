@@ -48,8 +48,8 @@ export function TrafficChart({ state }: { state: ConsoleState }) {
       >
         <defs>
           <linearGradient id="traffic-fill" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#31d2c0" stopOpacity=".18" />
-            <stop offset="100%" stopColor="#31d2c0" stopOpacity="0" />
+            <stop offset="0%" stopColor="#87a9d2" stopOpacity=".18" />
+            <stop offset="100%" stopColor="#87a9d2" stopOpacity="0" />
           </linearGradient>
         </defs>
         {[0, 1, 2, 3].map((i) => (
@@ -71,7 +71,7 @@ export function TrafficChart({ state }: { state: ConsoleState }) {
         <polyline
           points={coordinates('requests')}
           fill="none"
-          stroke="#35d6c1"
+          stroke="#87a9d2"
           strokeWidth="2.4"
           strokeLinejoin="round"
         />
@@ -279,7 +279,7 @@ export function Overview({
       <div className="metric-grid">
         <div className="metric-card">
           <div className="metric-label">
-            REQUEST RATE
+            Request rate
             <Icon name="traffic" size={18} />
           </div>
           <div className="metric-value">
@@ -294,7 +294,7 @@ export function Overview({
         </div>
         <div className="metric-card">
           <div className="metric-label">
-            HEALTHY BACKENDS
+            Healthy backends
             <Icon name="server" size={18} />
           </div>
           <div className="metric-value">
@@ -310,7 +310,7 @@ export function Overview({
         </div>
         <div className="metric-card">
           <div className="metric-label">
-            SECURITY REJECTIONS
+            Security rejections
             <Icon name="shield" size={18} />
           </div>
           <div className="metric-value">
@@ -322,7 +322,7 @@ export function Overview({
         </div>
         <div className="metric-card">
           <div className="metric-label">
-            AWAITING APPROVAL
+            Pending approvals
             <Icon name="lock" size={18} />
           </div>
           <div className="metric-value">
@@ -340,7 +340,7 @@ export function Overview({
       <LoadBalancer state={state} />
       <div className="overview-grid">
         <Panel
-          title="Traffic at the edge"
+          title="Request activity"
           eyebrow="DATA PLANE"
           action={
             <button className="text-button" onClick={() => navigate('traffic')}>
@@ -365,7 +365,7 @@ export function Overview({
             <Icon name="agent" size={22} />
           </span>
           <div>
-            <h2>From signal to supervised response.</h2>
+            <h2>Latest incident progress</h2>
             <p>
               {latest
                 ? `Latest incident · ${short(latest.id, 8)}`
@@ -415,7 +415,7 @@ export function Overview({
         >
           <IncidentTable state={state} choose={choose} limit={4} />
         </Panel>
-        <Panel title="Controls in place" eyebrow="ENFORCEMENT">
+        <Panel title="Active controls" eyebrow="ENFORCEMENT">
           <div className="control-list">
             <div>
               <span className="control-check">

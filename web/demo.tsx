@@ -66,7 +66,7 @@ export function DemoPanel({
           <Icon name="close" />
         </button>
         <span className="eyebrow">GUIDED LOCAL DEMO</span>
-        <h2 id="demo-title">Run it from here.</h2>
+        <h2 id="demo-title">Demo controls</h2>
         <p>These buttons send real synthetic traffic and control your local test backend.</p>
         {state && !state.enabled && (
           <div className="notice">

@@ -81,8 +81,8 @@ export function App() {
             </span>
           </div>
           <span className="eyebrow">LOCAL OPERATOR ACCESS</span>
-          <h1>Control with confidence.</h1>
-          <p>Inspect real traffic. Investigate the evidence. Decide what happens next.</p>
+          <h1>Sign in to AegisGate</h1>
+          <p>Use your operator password to access the local console.</p>
           <form onSubmit={signIn}>
             <label htmlFor="password">Operator password</label>
             <input
@@ -117,7 +117,7 @@ export function App() {
           </div>
         </div>
         <div className="login-footer">
-          AEGISGATE <span>Human-supervised security. Evidence at every step.</span>
+          AEGISGATE <span>Local operator console</span>
         </div>
       </main>
     );
@@ -172,7 +172,7 @@ export function App() {
         <div className="sidebar-bottom">
           <div className="supervision">
             <Icon name="lock" size={18} />
-            <strong>Human in control</strong>
+            <strong>Approval required</strong>
             <p>
               Models investigate.
               <br />
@@ -220,12 +220,12 @@ export function App() {
                 {
                   (
                     {
-                      overview: 'Your perimeter, in view.',
-                      traffic: 'Every request has a route.',
-                      incidents: 'Signals worth your attention.',
-                      investigation: 'Follow the evidence.',
-                      response: 'Your decision. Bounded action.',
-                      audit: 'A record of every decision.',
+                      overview: 'Overview',
+                      traffic: 'Traffic and backend health',
+                      incidents: 'Incidents',
+                      investigation: 'Investigation',
+                      response: 'Response center',
+                      audit: 'Audit trail',
                     } as Record<string, string>
                   )[tab]
                 }
@@ -234,7 +234,7 @@ export function App() {
                 {
                   (
                     {
-                      overview: 'Real traffic. Observable decisions. Human-supervised response.',
+                      overview: 'Request activity, backend availability, and pending responses.',
                       traffic: 'Routing distribution and backend health from the running proxy.',
                       incidents: 'Deterministic detections, with context before conclusions.',
                       investigation:
@@ -355,7 +355,7 @@ export function App() {
             <span>
               <Icon name="shield" size={13} /> AegisGate · Local development environment
             </span>
-            <span>AI stays outside the forwarding path.</span>
+            <span>Model requests run separately from traffic forwarding.</span>
           </footer>
         </main>
       </div>
