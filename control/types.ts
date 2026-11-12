@@ -44,7 +44,6 @@ export type Snapshot = {
   events: Evidence[];
 };
 export type Incident = {
-  exercise?: { kind: 'containment_validation'; source: string; requestedTtlSeconds: 60 };
   proxyEpoch?: string;
   phase?: 'verification';
   verification?: Record<string, unknown>;
