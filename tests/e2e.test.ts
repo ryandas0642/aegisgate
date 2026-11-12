@@ -161,7 +161,11 @@ test(
     const decisions: Decision[] = [
       {
         plan: ['Inspect actual source events.'],
-        requests: [{ tool: 'recent_events', arguments: { limit: 50 } }],
+        requests: [
+          { tool: 'recent_events', arguments: { limit: 50 } },
+          { tool: 'compare_sources', arguments: { limit: 100 } },
+          { tool: 'containment_preview', arguments: { limit: 100 } },
+        ],
         finding: null,
         proposal: null,
       },

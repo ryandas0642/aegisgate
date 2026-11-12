@@ -24,7 +24,14 @@ export const decisionSchema = {
         properties: {
           tool: {
             type: 'string',
-            enum: ['recent_events', 'metrics', 'backend_health', 'active_rules'],
+            enum: [
+              'recent_events',
+              'metrics',
+              'backend_health',
+              'active_rules',
+              'compare_sources',
+              'containment_preview',
+            ],
           },
           arguments: {
             type: 'object',

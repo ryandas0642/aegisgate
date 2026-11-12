@@ -31,6 +31,7 @@ test('provider transmits strict output schema and records only public response f
     assert.equal(init.headers.Authorization, 'Bearer ' + key);
     const body = JSON.parse(init.body);
     assert.equal(body.response_format.json_schema.strict, true);
+    assert.deepEqual(JSON.parse(body.messages[1].content).availableEvidenceIds, ['event-1']);
     const schema = JSON.stringify(body.response_format.json_schema.schema);
     assert.ok(
       !schema.includes('uniqueItems') &&

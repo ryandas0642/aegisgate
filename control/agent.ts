@@ -21,11 +21,23 @@ export async function investigate(
   for (const event of incident.verificationEvidence ?? []) evidence.add(event.id);
   const history: unknown[] = [];
   let tools = 0;
+  const completedTools = new Set<string>();
   const deadline = Date.now() + 120000;
   for (let turn = 0; turn < 6; turn++) {
     if (Date.now() > deadline) throw new Error('Investigation deadline exhausted');
     const reply = await dependencies.decide(
-      { incident, detection, history, remainingTurns: 6 - turn },
+      {
+        incident,
+        detection,
+        history,
+        remainingTurns: 6 - turn,
+        responseConstraints: {
+          proposalSource: incident.source ?? null,
+          requiredProposalEvidenceIds: [detection.id],
+          requiredToolsBeforeProposal: ['compare_sources', 'containment_preview'],
+          remainingToolCalls: 12 - tools,
+        },
+      },
       evidence,
       dependencies.record,
     );
@@ -37,6 +49,7 @@ export async function investigate(
         if (++tools > 12) throw new Error('Investigation tool budget exhausted');
         await dependencies.record('tool.requested', request);
         const result = await dependencies.tool(request);
+        completedTools.add(request.tool);
         const collect = (value: unknown): void => {
           if (Array.isArray(value)) value.forEach(collect);
           else if (value && typeof value === 'object') {
@@ -56,6 +69,8 @@ export async function investigate(
         throw new Error('Verification reviews cannot propose another action');
       if (!tools)
         throw new Error('An action proposal requires an actual investigation tool result');
+      if (!completedTools.has('compare_sources') || !completedTools.has('containment_preview'))
+        throw new Error('Containment requires source comparison and impact preview evidence');
       if (
         incident.kind !== 'security' ||
         decision.proposal.source !== incident.source ||
