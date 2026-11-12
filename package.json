@@ -16,7 +16,6 @@
     "setup": "tsx scripts/setup_env.ts",
     "build:runtime": "tsc -p tsconfig.runtime.json",
     "test:browser": "tsx scripts/browser_review.ts",
-    "test:cyber": "tsx scripts/cyber_review.ts",
     "format": "prettier --write \"control/**/*.ts\" \"web/**/*.{ts,tsx,css}\" \"scripts/**/*.ts\" \"tests/**/*.ts\" *.json vite.config.ts compose.yaml",
     "test:proxy": "python tests/proxy_integration.py",
     "test:e2e": "tsx --test tests/e2e.test.ts",
