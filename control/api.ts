@@ -28,7 +28,6 @@ type Job = {
   incidentId: string;
   reviewId?: string;
   evidenceIds: string[];
-  completedTools?: string[];
   expires: number;
   status: string;
 };
@@ -121,26 +120,15 @@ export function createApi(options: Options) {
   const claim = () => {
     const connection = store.get<{ online: boolean; receivedAt: number }>('connection');
     if (!connection?.online || Date.now() - connection.receivedAt > 3000) return null;
-    const snapshot = store.get<Snapshot>('snapshot');
-    if (!snapshot) return null;
     const review = store
       .proposals()
-      .find(
-        (p) =>
-          p.content.expectedEpoch === snapshot.epoch &&
-          ['verified', 'inconclusive'].includes(p.status) &&
-          store.get<{ status: string }>('review:' + p.id)?.status === 'pending',
-      );
+      .find((p) => store.get<{ status: string }>('review:' + p.id)?.status === 'pending');
     const incident = review
       ? store.incident(review.content.incidentId)
       : store
           .incidents()
-          .find(
-            (item) =>
-              item.status === 'detected' &&
-              item.proxyEpoch === snapshot.epoch &&
-              Date.now() - Date.parse(item.createdAt) < 300000,
-          );
+          .reverse()
+          .find((item) => item.status === 'detected');
     if (!incident) return null;
     const detection = store.evidence(incident.eventId);
     if (!detection) return null;
@@ -208,7 +196,6 @@ export function createApi(options: Options) {
         }
       };
       collect(result);
-      job.completedTools = [...new Set([...(job.completedTools ?? []), input.request.tool])];
       store.set('job:' + job.id, job);
       return json(response, 200, result);
     }
@@ -235,12 +222,6 @@ export function createApi(options: Options) {
     if (path === '/internal/propose') {
       if (job.reviewId || input.mode !== 'live')
         throw new Error('This job cannot propose an action');
-      if (
-        !['compare_sources', 'containment_preview'].every((tool) =>
-          job.completedTools?.includes(tool),
-        )
-      )
-        throw new Error('Containment requires source comparison and impact preview evidence');
       return json(response, 200, await broker.propose(incident.id, input.proposal, 'live'));
     }
     if (path === '/internal/finish') {

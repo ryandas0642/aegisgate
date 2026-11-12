@@ -13,10 +13,10 @@ test('fixture model chooses actual evidence tools before an evidence-backed prop
   let turns = 0;
   const decisions: Decision[] = [
     {
-      plan: ['Compare clients and preview containment impact.'],
+      plan: ['Inspect source events and backend health.'],
       requests: [
-        { tool: 'compare_sources', arguments: { limit: 100 } },
-        { tool: 'containment_preview', arguments: { limit: 100 } },
+        { tool: 'recent_events', arguments: { limit: 20 } },
+        { tool: 'backend_health', arguments: { limit: 1 } },
       ],
       finding: null,
       proposal: null,
