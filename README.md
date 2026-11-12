@@ -33,7 +33,6 @@ From the project directory:
 npm ci
 npm run setup
 npm run build:proxy
-npm run build
 npm run dev
 ```
 
@@ -50,7 +49,7 @@ The native launcher starts:
 | Private proxy management | `127.0.0.1:9090` |
 | Synthetic backends | `127.0.0.1:8101`, `127.0.0.1:8102` |
 
-Use `stop a` / `start a` or `stop b` / `start b` in the launcher terminal to demonstrate real backend loss and recovery. Ctrl+C stops the owned local stack. Ports must be free; the launcher does not terminate unrelated services. Windows process-tree termination is distinct from the tested POSIX graceful-drain behavior.
+`npm run dev` builds the dashboard and starts the local stack with demo buttons enabled. In the **Load balancer visualizer**, click **Start normal traffic**, **Stop backend A**, then **Restart backend A** to demonstrate routing and recovery. Ctrl+C stops the owned local stack. Ports must be free; the launcher does not terminate unrelated services. Windows process-tree termination is distinct from the tested POSIX graceful-drain behavior.
 
 ## Enable live investigation
 
@@ -60,7 +59,7 @@ Without a key, the console explicitly reports investigation unavailability. Dete
 
 ## Demonstrate the lifecycle
 
-For the simplest walkthrough, run `npm run demo` (or double-click `Demo.cmd`), sign in, and click **Run a demo**. Start normal traffic, send a burst, and stop/restart Backend A with dashboard buttons. Security responses still require your separate review and approval. See the [guided demo](docs/demo.md).
+Run `npm run dev`, sign in, and use the **Load balancer visualizer** on Overview or Traffic & health. Start traffic, stop Backend A, watch new requests go to B, then restart A. Dots replay observed completed requests; backend counts and shares cover the proxy lifetime. For the security scenario, click **Run a demo** to send a burst, review the incident, and check the response. Security responses still require your separate approval. See the [guided demo](docs/demo.md).
 
 For optional command-line traffic, use a second terminal:
 

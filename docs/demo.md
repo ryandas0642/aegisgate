@@ -2,7 +2,22 @@
 
 ## Guided demo: one terminal, then dashboard buttons
 
-Run `npm run demo` (or double-click `Demo.cmd` on Windows), open http://127.0.0.1:4174, sign in, and click **Run a demo**.
+Run `npm run dev`, open http://127.0.0.1:4174, and sign in. This command builds the dashboard and launches the stack. Use the buttons for the rest.
+
+### Load balancing
+
+On **Overview**, find **Load balancer visualizer**:
+
+1. **Start normal traffic** — watch requests distributed between the healthy backends.
+2. **Stop backend A** — after health checks fail, A turns amber and its route becomes dashed. New traffic reaches B.
+3. **Restart backend A** — after successful health checks, A turns green and receives traffic again.
+4. **Stop traffic** when finished.
+
+The same visualizer is on **Traffic & health**. Dots replay newly observed completed requests, with at most 12 animated per update. They do not represent packets currently in flight. Backend counts and percentages cover the proxy lifetime, so they do not instantly reset to 0% / 100% during failover. Idle and offline views do not invent moving traffic.
+
+### Security
+
+Click **Run a demo**:
 
 1. **Start normal traffic** — requests run automatically for up to five minutes.
 2. **Send traffic burst** — generates a real bounded burst from the test client.
@@ -31,7 +46,7 @@ IP identity comes from the socket. Changing X-Forwarded-For cannot impersonate t
 
 ## Reliability scenario
 
-Keep normal traffic running. In the terminal running `npm run dev`, type `stop a`, then press Enter. After the configured failed checks, Backend A becomes unavailable and new requests route to Backend B. The incident's investigation explains actual health evidence. Type `start a` to restore it; configured successful checks return it to routing. Automatic health routing is distinct from an approved security action.
+Keep normal traffic running and use **Stop backend A** in the visualizer. After the configured failed checks, Backend A becomes unavailable and new requests route to Backend B. The incident's investigation explains actual health evidence. Use **Restart backend A** to restore it; configured successful checks return it to routing. Automatic health routing is distinct from an approved security action.
 
 To exercise no-healthy-backend behavior, stop both and observe HTTP 503, then restart both. Use the CLI commands only in the demo launcher, not as model tools.
 

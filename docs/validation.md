@@ -54,3 +54,11 @@ Follow the README setup, then rerun the listed commands. The browser check requi
 - `npm run demo`: production UI build and native stack startup passed. `npm run build:runtime` passed.
 - Actual Edge browser: signed in, started normal traffic, generated a burst with HTTP 429 responses, stopped Backend A and observed unhealthy status, restarted it and observed recovery, sent target/control verification requests, and stopped traffic. No page runtime errors occurred.
 - Provider configuration was disabled only for this browser-check process. These checks do not establish live OpenRouter behavior or approval/enforcement; the existing response lifecycle tests cover that flow with explicit fixtures.
+
+## Startup and load-balancer visualization — November 12, 2026
+
+- `npm run dev` now builds the dashboard before launching the native stack. The separate command-file launcher was removed; the local demo controls remain enabled by the native launcher.
+- Production UI and compiled runtime builds passed. `npm test`: **16 passed, 0 failed**.
+- Actual Edge browser against an isolated C++ proxy and two HTTP backends: dashboard traffic reached both backends; completed-request dots appeared; stopping A changed its displayed health and removed it from routing; four subsequent requests reached B while A's routing counter stayed fixed; restarting A restored routing to it.
+- The visualizer was checked on Overview and Traffic & health. Idle and offline checks left no animated request dots. Mobile document-width checks and browser runtime-error checks passed.
+- These tests used separate ports and a separate ignored database, with no model calls. Owned test processes were stopped; the pre-existing user stack was left running.
