@@ -38,7 +38,7 @@ The captured UI uses actual synthetic local traffic and actual stored records. M
 
 ## Unexecuted paths and limits
 
-- **Live provider acceptance was not run:** no OpenRouter API key was configured. Model choices, tool behavior, schema rejection, timeout/error handling, and wire contracts were tested with explicit fixtures; documentation compatibility was checked. Actual model behavior and account/model availability still need a configured live run.
+- **At the initial November 10 validation, live provider acceptance was not run:** no OpenRouter API key was configured. The November 11 cyber-demo record below documents the subsequent configured live run. Fixture results alone still do not establish model quality.
 - **Docker build/run was not executed:** Docker was not installed on this host. Container files were prepared and parsed, the Linux proxy was built/tested, and the compiled application entry point was exercised natively. These do not establish that Compose orchestration or image builds passed.
 - **The optional CMake build and remote CI workflow were not executed.** Verified native builds used the supplied Python compiler wrapper. CI is defined for a future repository push; no GitHub remote was created or published here.
 - **Windows graceful draining is not claimed.** The launcher stops owned Windows process trees; the drain test specifically runs on POSIX.
@@ -54,3 +54,14 @@ Follow the README setup, then rerun the listed commands. The browser check requi
 - `npm run demo`: production UI build and native stack startup passed. `npm run build:runtime` passed.
 - Actual Edge browser: signed in, started normal traffic, generated a burst with HTTP 429 responses, stopped Backend A and observed unhealthy status, restarted it and observed recovery, sent target/control verification requests, and stopped traffic. No page runtime errors occurred.
 - Provider configuration was disabled only for this browser-check process. These checks do not establish live OpenRouter behavior or approval/enforcement; the existing response lifecycle tests cover that flow with explicit fixtures.
+
+## Cyber investigation and containment update — November 11, 2026
+
+- `npm test`: **20 passed, 0 failed**, including current-lifetime source comparison, read-only collateral preview, required tool checks at the investigator API, exact scenario selection despite second-resolution timestamps, and old-incident queue exclusion.
+- Production UI and compiled runtime builds passed. The real-proxy E2E passed, including the two required cyber tools and 60-second rule expiry with the control plane stopped.
+- A configured **live OpenRouter / `openai/gpt-4.1-mini`** run returned a proposal after choosing `recent_events`, `active_rules`, `compare_sources`, and `containment_preview`. Automated browser interaction reviewed the isolated synthetic exercise, checked consent, and approved the exact proposal. Actual requests established target HTTP 403 and successful control traffic. A subsequent real model outcome review completed.
+- Earlier exploratory live attempts demonstrated a no-action assessment and rejected invalid citations/proposals. The final tested prompt supplies explicit allowed evidence and target constraints. This remains stochastic model behavior; a successful exercise does not guarantee future provider responses or security classification accuracy.
+- The separate offline browser run passed with an explicitly **manual** proposal, consent-disabled approval before review, actual approval and verification, no page runtime errors, and desktop/mobile overflow checks. `npm run test:cyber` reproduces this isolated fallback check; add `-- --live` to opt into model calls.
+- [Live synthetic containment capture](screenshots/cyber-demo.png). It records an actual exercise, not proof of malicious traffic. Browser approvals were automated test-operator actions, not an assertion that a person attended the test.
+
+The existing user stack was left running. Verification used owned processes on separate ports and separate ignored databases; the test processes were stopped afterward. No remote service was deployed.

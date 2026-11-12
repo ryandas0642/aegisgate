@@ -27,7 +27,7 @@ flowchart TD
 | C++ data plane | Parse bounded HTTP/1.1, enforce source and rate controls, select healthy backends, forward, emit telemetry | Public listener; separate bearer-authenticated management listener |
 | Deterministic detectors | Count repeated source violations and backend health failures | Structured detection events with IDs, sequence, time, source/target and rule evidence |
 | Control plane | Poll snapshots every 500 ms, deduplicate events, create incidents, track freshness and proxy lifetimes | Operator API and separately authenticated investigator API |
-| Investigator process | Make actual model calls, choose evidence tools, revise a concise plan, produce findings and optional proposals | Four bounded read tools; proposal endpoint; no approval grant |
+| Investigator process | Make actual model calls, choose evidence tools, revise a concise plan, produce findings and optional proposals, review verified outcomes | Six bounded read tools; source comparison and containment preview required before proposals; no approval grant |
 | Broker | Validate incident evidence, target, parameters, proposal hash, human session and configuration version | Explicit temporary-deny catalog only |
 | Verifier and audit | Correlate applied rule with later denied target traffic and successful control traffic; retain linked audit records | SQLite and operator views |
 

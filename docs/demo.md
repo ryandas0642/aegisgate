@@ -1,15 +1,17 @@
 # Repeatable local demonstration
 
-## Guided demo: one terminal, then dashboard buttons
+## Guided cyber demo: stay on one screen
 
-Run `npm run demo` (or double-click `Demo.cmd` on Windows), open http://127.0.0.1:4174, sign in, and click **Run a demo**.
+Run `npm run demo` (or double-click `Demo.cmd` on Windows), open http://127.0.0.1:4174, and sign in. **Cyber demo** is the opening screen. Restart an older running stack once to load the new server controls.
 
-1. **Start normal traffic** — requests run automatically for up to five minutes.
-2. **Send traffic burst** — generates a real bounded burst from the test client.
-3. **Review incident** — opens its investigation. In Response center, review and approve the proposed action yourself; a manual fallback is available if needed.
-4. Reopen **Run a demo**, click **Check response**, then **View response** to inspect verification.
+1. Click **Start cyber demo**. Normal traffic and a bounded burst start together. The page follows the exact new detection using proxy sequence numbers.
+2. Watch the live plan and completed tools. The agent compares source behavior, checks containment scope, and returns a finding. This can take a few seconds or longer, depending on the provider.
+3. Read its proposal, check the consent box, and click **Approve containment**. The source, duration, impact, evidence, and exact proposal fingerprint are shown on the same page.
+4. Stay on the page. Test requests run automatically after approval. **HTTP 403 observed** plus **Success observed** establish target denial and successful normal traffic. The agent then reviews those actual results.
 
-For reliability, use **Stop backend A**, wait for it to become unavailable, then **Restart backend A**. No extra traffic terminal is needed. Use **Stop traffic** to end the generator. Closing the guide leaves normal traffic running until its five-minute limit.
+The scenario explicitly asks for a synthetic containment exercise, not a verdict that the client is malicious. The agent may decline a proposal if the evidence or current state does not support it. If live inference fails, **Create manual fallback · 60 seconds** creates an explicitly human-authored proposal; it still needs consent and approval. Retry live investigation is also available. Neither path fabricates a model result.
+
+For another run, finish any pending review, wait for the temporary block to expire, and allow at least 31 seconds between starts. Normal traffic runs for up to five minutes. **Demo controls and interview talking points** contains **Stop demo traffic** and the optional Backend A stop/restart buttons.
 
 The harness operates only through the native launcher. Standalone or container consoles show the controls as unavailable. Demo controls require the operator session and CSRF token; the investigator cannot use them. They never approve a security response or clear audit history.
 

@@ -1,22 +1,22 @@
 # AegisGate
 
-**Agentic AI cybersecurity and load balancing platform**
+**AI-assisted HTTP abuse investigation and containment**
 
-A real C++ HTTP reverse proxy with deterministic security controls, an evidence-seeking investigation agent, and a human-supervised response console.
+A security operations demo built around a real C++ HTTP proxy. An agent investigates suspicious request patterns, compares clients, checks containment impact, and proposes a temporary block. You approve it; real follow-up traffic verifies the result.
 
 **Traffic → detection → investigation → recommendation → approval → action → verification → audit.**
 
 The model stays outside request forwarding. A provider outage leaves the proxy operational. Every state-changing response uses an explicit bounded catalog and an authenticated operator decision.
 
-![AegisGate console showing actual synthetic local traffic](docs/screenshots/overview.png)
+![Live AI containment exercise with observed proxy verification](docs/screenshots/cyber-demo.png)
 
-*Actual local synthetic traffic; provider unconfigured in this capture. Chart values and incidents come from the running proxy.*
+*Actual local synthetic exercise: live AI proposal, explicit test-operator approval, target denial and successful normal traffic. A controlled exercise does not establish malicious intent.*
 
 ## What works
 
 - Real HTTP/1.1 forwarding, healthy-backend round robin, active health checks, failure removal, and recovery.
 - Peer-IP/CIDR filtering, per-client rate limiting, connection and message limits, and structured detections.
-- One model-directed investigator selecting bounded read tools, citing actual evidence, explaining alternatives and uncertainty, and optionally proposing a temporary source deny.
+- One model-directed investigator selecting six bounded evidence tools, comparing suspicious and normal traffic, previewing collateral impact, citing evidence, and optionally proposing a temporary source deny. The same agent reviews observed containment results afterward.
 - Exact proposal fingerprints, short approval windows, current-state checks, idempotent proxy enforcement, autonomous TTL expiration, and outcome verification.
 - Functional traffic, incident, investigation, response, and audit views with live/historical and model/manual/fixture labels.
 - A labeled manual operator fallback when the provider is unavailable, plus repeatable security and reliability demonstrations.
@@ -60,7 +60,7 @@ Without a key, the console explicitly reports investigation unavailability. Dete
 
 ## Demonstrate the lifecycle
 
-For the simplest walkthrough, run `npm run demo` (or double-click `Demo.cmd`), sign in, and click **Run a demo**. Start normal traffic, send a burst, and stop/restart Backend A with dashboard buttons. Security responses still require your separate review and approval. See the [guided demo](docs/demo.md).
+Run `npm run demo` (or double-click `Demo.cmd`), sign in, and click **Start cyber demo** on the opening screen. It starts normal traffic and a controlled burst, opens the matching incident, and shows the agent's actual work. Review the proposal, check the consent box, and click **Approve containment**. Verification requests run automatically while the page stays open. See the [guided demo](docs/demo.md) and [interview walkthrough](docs/interview.md).
 
 For optional command-line traffic, use a second terminal:
 
@@ -99,6 +99,8 @@ npm audit
 The end-to-end test uses **real sockets and the real C++ proxy** with an **explicit model fixture**. It also starts the actual investigator without a provider key, verifies forwarding continues, simulates an authenticated operator decision, and observes 60-second expiry with the control plane stopped. It takes about one minute. Provider fixtures test adapter contracts, not live model quality.
 
 With the local stack already running and Edge/Chromium available, `npm run test:browser` checks actual sign-in, synthetic detection, all views and mobile layout, saving screenshots in `.runtime/review/`. It does not approve an action; an already configured runtime provider may investigate the generated incident. Set `AEGIS_BROWSER_EXECUTABLE` if needed. [Executed results and limitations](docs/validation.md).
+
+`npm run test:cyber` builds on an already built UI/proxy and checks the single-screen flow on isolated ports, including manual fallback, consent gating, actual approval, automatic verification and mobile layout. It makes no model calls by default. Add `-- --live` to explicitly exercise the configured provider; this uses provider credits. The script records real outcomes and never inserts a fake AI response.
 
 ## Design and evidence
 
