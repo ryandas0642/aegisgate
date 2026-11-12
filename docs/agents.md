@@ -20,12 +20,8 @@ An investigation has at most six decision turns, twelve tool requests, eight HTT
 | `metrics` | Proxy-lifetime counters and a bounded source sample | Sample counts are explicitly not a complete traffic history |
 | `backend_health` | Current configured backend health and routing selections | Read only |
 | `active_rules` | Current temporary rules, rate limits, epoch and revision | Read only |
-| `compare_sources` | Current-lifetime request outcomes for the target versus other clients, with actual evidence records | At most 100 retained requests; missing traffic remains unknown |
-| `containment_preview` | Exact /32 target, bounded sample impact, existing block, healthy backends, and NAT/shared-address caveat | Read-only preview; never installs a block |
 
-All tools require fresh proxy telemetry and reject incidents from a previous proxy lifetime. Tool output receives a durable evidence reference. A final finding contains observations with citations, alternative explanations, uncertainty, and a recommendation. The agent may finish without proposing an action. A containment proposal requires successful `compare_sources` and `containment_preview` calls and must cite the original detection. Both the agent loop and investigator API enforce the tool prerequisites. A model verdict alone never changes proxy state.
-
-The native cyber demo adds a server-authored exercise objective only to its current, sequence-matched test incident: investigate and offer a 60-second containment exercise if appropriate. This does not grant approval or establish malicious intent. Ordinary incidents do not receive that objective. Old proxy lifetimes and stale detections are excluded from the worker queue.
+All tools require fresh proxy telemetry. Tool output receives a durable evidence reference. A final finding contains observations with citations, alternative explanations, uncertainty, and a recommendation. The agent may finish without proposing an action. An action proposal requires at least one actual tool result and must cite the incident detection. A model verdict alone never changes proxy state.
 
 ## Approval and outcome review
 
@@ -37,4 +33,4 @@ The deterministic verifier first checks installation, then looks for post-action
 
 With no key or a failed provider, the UI explicitly shows no live finding. The operator can inspect deterministic evidence and create a **manual operator proposal**, followed by the same separate approval process. This is a real local fallback, not simulated model output.
 
-Unit/E2E tests inject a provider/decision fixture and label its results `fixture`; they do not establish live model behavior or quality. The general browser script uses the running APIs and synthetic traffic without approving an action. The isolated `test:cyber` browser script explicitly exercises approval and automatic verification, using a clearly labeled manual fallback by default. `test:cyber -- --live` opts into the configured provider. See the November 11 live acceptance record in [validation](validation.md); fixture success alone is never reported as live inference.
+Automated tests inject a provider/decision fixture and label its results `fixture`; they do not establish live model behavior or quality. The browser acceptance script uses the actual running APIs and synthetic traffic, and does not supply a fake model result or execute an approval. Live provider success has not been claimed merely because adapter fixtures pass.
