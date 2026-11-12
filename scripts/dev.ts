@@ -75,7 +75,7 @@ launch('console', process.execPath, ['--import', 'tsx', 'control/server.ts'], {
   AEGIS_DEMO_ENABLED: '1',
 });
 console.log(
-  'Local synthetic backends started. Type "stop a", "start a", "stop b", or "start b" to demonstrate health failover. Ctrl+C stops this local stack.',
+  `Open http://127.0.0.1:${config.port}. Start traffic and demonstrate failover with the dashboard buttons. Ctrl+C stops this local stack.`,
 );
 process.stdin.setEncoding('utf8');
 let pending = '';

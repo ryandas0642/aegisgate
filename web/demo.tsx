@@ -70,7 +70,7 @@ export function DemoPanel({
         <p>These buttons send real synthetic traffic and control your local test backend.</p>
         {state && !state.enabled && (
           <div className="notice">
-            Start the app with <code>npm run demo</code> to enable these controls.
+            Start the app with <code>npm run dev</code> to enable these controls.
           </div>
         )}
         <div className="demo-step">

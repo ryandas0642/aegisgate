@@ -328,7 +328,7 @@ export function createApi(options: Options) {
         if (request.method === 'POST' && url.pathname === '/api/demo') {
           if (!options.demo)
             return json(response, 409, {
-              error: 'Start with npm run demo to enable local demo controls.',
+              error: 'Start with npm run dev to enable local demo controls.',
             });
           const input = await body(request);
           if (Object.keys(input).length !== 1 || !demoActions.includes(input.action))
