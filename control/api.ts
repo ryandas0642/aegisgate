@@ -11,6 +11,7 @@ import { investigateTool } from './tools.js';
 import { validateDecision } from './decision.js';
 import type { Incident, Snapshot } from './types.js';
 import { demoActions, type Demo, type DemoAction } from './demo.js';
+import { isScenarioIncident } from './scenario.js';
 
 type Options = {
   demo?: Demo;
@@ -171,6 +172,18 @@ export function createApi(options: Options) {
         mode: 'live',
       });
     });
+    const scenario = options.demo?.state().scenario;
+    const exercise =
+      !review &&
+      scenario &&
+      Date.now() - scenario.startedAt < 300000 &&
+      isScenarioIncident(incident, scenario, snapshot.epoch)
+        ? {
+            kind: 'containment_validation' as const,
+            source: '127.0.0.2',
+            requestedTtlSeconds: 60 as const,
+          }
+        : undefined;
     return {
       jobId: job.id,
       incident: review
@@ -182,7 +195,7 @@ export function createApi(options: Options) {
             instruction:
               'Review these deterministic verification results. Inspect current evidence if useful. Do not propose another action.',
           }
-        : incident,
+        : { ...incident, ...(exercise ? { exercise } : {}) },
       detection,
     };
   };
@@ -352,12 +365,51 @@ export function createApi(options: Options) {
           const input = await body(request);
           if (Object.keys(input).length !== 1 || !demoActions.includes(input.action))
             throw new Error('Unknown demo action');
+          let boundary: { epoch: string; afterSequence: number } | undefined;
+          if (input.action === 'scenario') {
+            const current = await proxy.snapshot();
+            boundary = { epoch: current.epoch, afterSequence: current.sequence };
+            if (!current.backends.some((backend) => backend.healthy))
+              throw new Error('Wait for a healthy backend before starting the cyber demo.');
+            if (
+              store
+                .incidents()
+                .some(
+                  (incident) =>
+                    incident.proxyEpoch === current.epoch &&
+                    incident.source === '127.0.0.2' &&
+                    ['detected', 'investigating'].includes(incident.status) &&
+                    Date.now() - Date.parse(incident.createdAt) < 300000,
+                )
+            )
+              throw new Error(
+                'The test-client investigation is still running. Wait for its finding before starting again.',
+              );
+            const rule = current.rules.find((rule) => rule.source === '127.0.0.2');
+            if (rule)
+              throw new Error(
+                'The test client is still contained. Wait for its temporary block to expire before starting again.',
+              );
+            if (
+              store
+                .proposals()
+                .some(
+                  (proposal) =>
+                    proposal.content.source === '127.0.0.2' &&
+                    proposal.content.expectedEpoch === current.epoch &&
+                    ['proposed', 'executing', 'uncertain'].includes(proposal.status),
+                )
+            )
+              throw new Error(
+                'Finish reviewing the current test-client proposal before starting again.',
+              );
+          }
           store.audit('demo.requested', {
             action: input.action,
             synthetic: true,
             actor: 'local-operator',
           });
-          const result = await options.demo.run(input.action as DemoAction);
+          const result = await options.demo.run(input.action as DemoAction, boundary);
           store.audit('demo.completed', { action: input.action, synthetic: true, result });
           return json(response, 200, result);
         }

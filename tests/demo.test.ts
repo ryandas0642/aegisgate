@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { Demo } from '../control/demo.js';
+import { isScenarioIncident } from '../control/scenario.js';
+import { seed } from './fixtures.js';
 
 test('demo sends bounded real traffic from distinct clients and only fixed backend operations', async (t) => {
   const peers: string[] = [],
@@ -36,4 +38,34 @@ test('demo sends bounded real traffic from distinct clients and only fixed backe
   assert.equal(demo.state().running, true);
   await demo.run('stop-traffic');
   assert.equal(demo.state().running, false);
+  const scenario = await demo.run('scenario');
+  assert.equal(scenario.busy, false);
+  assert.equal(scenario.running, true);
+  assert.ok(scenario.scenario?.startedAt);
+  assert.equal((scenario.last as any).normalStatus, 200);
+  assert.equal((scenario.last as any).responses['429'], 80);
+  await assert.rejects(demo.run('scenario'), /31 seconds/);
+  await demo.run('stop-traffic');
+});
+
+test('scenario selects by proxy sequence even when detection time rounds before the start', (t) => {
+  const { store, incident } = seed();
+  t.after(() => store.db.close());
+  const current = { ...incident, eventId: 'test-epoch:34', createdAt: '2026-11-11T13:00:00Z' };
+  const boundary = {
+    epoch: 'test-epoch',
+    afterSequence: 3,
+    startedAt: Date.parse('2026-11-11T13:00:00.864Z'),
+  };
+  assert.ok(isScenarioIncident(current, boundary, 'test-epoch'));
+  assert.equal(
+    isScenarioIncident({ ...current, eventId: 'test-epoch:2' }, boundary, 'test-epoch'),
+    false,
+  );
+  assert.equal(isScenarioIncident(current, boundary, 'new-epoch'), false);
+  assert.equal(
+    isScenarioIncident({ ...current, source: '127.0.0.1' }, boundary, 'test-epoch'),
+    false,
+  );
+  assert.equal(isScenarioIncident(current, null, 'test-epoch'), false);
 });
